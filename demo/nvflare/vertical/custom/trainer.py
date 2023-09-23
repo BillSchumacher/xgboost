@@ -63,10 +63,7 @@ class XGBoostTrainer(Executor):
         }
         with xgb.collective.CommunicatorContext(**communicator_env):
             # Load file, file will not be sharded in federated mode.
-            if rank == 0:
-                label = '&label_column=0'
-            else:
-                label = ''
+            label = '&label_column=0' if rank == 0 else ''
             dtrain = xgb.DMatrix(f'higgs.train.csv?format=csv{label}', data_split_mode=1)
             dtest = xgb.DMatrix(f'higgs.test.csv?format=csv{label}', data_split_mode=1)
 

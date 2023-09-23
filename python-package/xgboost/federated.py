@@ -25,21 +25,20 @@ def run_federated_server(
     client_cert_path: str
         Path to the client certificate file. SSL is turned off if empty.
     """
-    if build_info()["USE_FEDERATED"]:
-        if not server_key_path or not server_cert_path or not client_cert_path:
-            _check_call(_LIB.XGBRunInsecureFederatedServer(port, world_size))
-        else:
-            _check_call(
-                _LIB.XGBRunFederatedServer(
-                    port,
-                    world_size,
-                    c_str(server_key_path),
-                    c_str(server_cert_path),
-                    c_str(client_cert_path),
-                )
-            )
-    else:
+    if not build_info()["USE_FEDERATED"]:
         raise XGBoostError(
             "XGBoost needs to be built with the federated learning plugin "
             "enabled in order to use this module"
         )
+    if server_key_path and server_cert_path and client_cert_path:
+        _check_call(
+            _LIB.XGBRunFederatedServer(
+                port,
+                world_size,
+                c_str(server_key_path),
+                c_str(server_cert_path),
+                c_str(client_cert_path),
+            )
+        )
+    else:
+        _check_call(_LIB.XGBRunInsecureFederatedServer(port, world_size))

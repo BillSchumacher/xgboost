@@ -91,5 +91,4 @@ def get_feature_weights(
         od = collections.OrderedDict(sorted(splits.items()))
         tuples = list(od.items())
         k, v = list(zip(*tuples))
-        w = np.polyfit(k, v, deg=1)
-        return w
+        return np.polyfit(k, v, deg=1)

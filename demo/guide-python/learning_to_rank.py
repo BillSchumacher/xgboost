@@ -43,12 +43,12 @@ def load_mlsr_10k(data_path: str, cache_path: str) -> RelDataCV:
     cacheroot_path = os.path.expanduser(args.cache)
     cache_path = os.path.join(cacheroot_path, "MSLR_10K_LETOR.pkl")
 
-    # Use only the Fold1 for demo:
-    # Train,      Valid, Test
-    # {S1,S2,S3}, S4,    S5
-    fold = 1
-
     if not os.path.exists(cache_path):
+        # Use only the Fold1 for demo:
+        # Train,      Valid, Test
+        # {S1,S2,S3}, S4,    S5
+        fold = 1
+
         fold_path = os.path.join(root_path, f"Fold{fold}")
         train_path = os.path.join(fold_path, "train.txt")
         valid_path = os.path.join(fold_path, "vali.txt")

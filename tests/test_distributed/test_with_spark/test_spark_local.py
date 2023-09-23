@@ -594,7 +594,7 @@ class TestPySparkLocal:
 
     def test_classifier_model_save_load(self, clf_data: ClfData) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
-            path = "file:" + tmpdir
+            path = f"file:{tmpdir}"
             clf = SparkXGBClassifier(**clf_data.cls_params)
             model = clf.fit(clf_data.cls_df_train)
             model.save(path)
@@ -658,7 +658,7 @@ class TestPySparkLocal:
 
     def test_classifier_model_pipeline_save_load(self, clf_data: ClfData) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
-            path = "file:" + tmpdir
+            path = f"file:{tmpdir}"
             classifier = SparkXGBClassifier()
             pipeline = Pipeline(stages=[classifier])
             pipeline = pipeline.copy(
@@ -802,7 +802,7 @@ class TestPySparkLocal:
 
     def test_regressor_model_save_load(self, reg_data: RegData) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
-            path = "file:" + tmpdir
+            path = f"file:{tmpdir}"
             regressor = SparkXGBRegressor(**reg_data.reg_params)
             model = regressor.fit(reg_data.reg_df_train)
             model.save(path)
@@ -850,7 +850,7 @@ class TestPySparkLocal:
 
     def test_regressor_model_pipeline_save_load(self, reg_data: RegData) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
-            path = "file:" + tmpdir
+            path = f"file:{tmpdir}"
             regressor = SparkXGBRegressor()
             pipeline = Pipeline(stages=[regressor])
             pipeline = pipeline.copy(
@@ -894,7 +894,7 @@ class TestPySparkLocal:
         model: SparkXGBClassifierModel = classifier.fit(clf_data.cls_df_train)
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            path = "file:" + tmpdir
+            path = f"file:{tmpdir}"
             model.write().overwrite().save(path)
 
             # The model trained with CPU, transform defaults to cpu

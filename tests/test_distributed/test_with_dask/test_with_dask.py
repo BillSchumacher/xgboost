@@ -114,9 +114,7 @@ def make_categorical(
     y = df["label"]
     X = df[df.columns.difference(["label"])]
 
-    if onehot:
-        return dd.get_dummies(X), y
-    return X, y
+    return (dd.get_dummies(X), y) if onehot else (X, y)
 
 
 def generate_array(
@@ -148,16 +146,12 @@ def deterministic_persist_per_worker(
     subpartition_slices = starmap(slice, sliding_window(2, subpartition_divisions))
     subpartitions = map(partial(getitem, df.partitions), subpartition_slices)
 
-    # Persist each subpartition on each worker
-    # Rebuild dataframe from persisted subpartitions
-    df2 = dd.concat(
+    return dd.concat(
         [
             sp.persist(workers=w, allow_other_workers=False)
             for sp, w in zip(subpartitions, workers)
         ]
     )
-
-    return df2
 
 
 Margin = TypeVar("Margin", dd.DataFrame, dd.Series, None)
@@ -256,7 +250,7 @@ def test_from_dask_dataframe() -> None:
             X["predict"] = prediction
             X["inplace_predict"] = series_predictions
 
-            assert bool(X.isnull().values.any().compute()) is False
+            assert not bool(X.isnull().values.any().compute())
 
 
 def test_from_dask_array() -> None:
@@ -722,7 +716,7 @@ def run_dask_classifier(
 
     config = json.loads(classifier.get_booster().save_config())
     n_threads = int(config["learner"]["generic_param"]["nthread"])
-    assert n_threads != 0 and n_threads != os.cpu_count()
+    assert n_threads not in [0, os.cpu_count()]
 
     forest = int(
         config["learner"]["gradient_booster"]["gbtree_model_param"]["num_parallel_tree"]
@@ -785,12 +779,12 @@ def test_empty_dmatrix_training_continuation(client: "Client") -> None:
     kRows, kCols = 1, 97
     X = dd.from_array(np.random.randn(kRows, kCols))
     y = dd.from_array(np.random.rand(kRows))
-    X.columns = ["X" + str(i) for i in range(0, kCols)]
+    X.columns = [f"X{str(i)}" for i in range(0, kCols)]
     dtrain = xgb.dask.DaskDMatrix(client, X, y)
 
     kRows += 1000
     X = dd.from_array(np.random.randn(kRows, kCols), chunksize=10)
-    X.columns = ["X" + str(i) for i in range(0, kCols)]
+    X.columns = [f"X{str(i)}" for i in range(0, kCols)]
     y = dd.from_array(np.random.rand(kRows), chunksize=10)
     valid = xgb.dask.DaskDMatrix(client, X, y)
 
@@ -1217,7 +1211,7 @@ def run_aft_survival(client: "Client", dmatrix_t: Type) -> None:
     dists = ["normal", "logistic", "extreme"]
     for dist in dists:
         params = base_params
-        params.update({"aft_loss_distribution": dist})
+        params["aft_loss_distribution"] = dist
         evals_result = {}
         out = xgb.dask.train(
             client, params, m, num_boost_round=100, evals=[(m, "train")]
@@ -1248,10 +1242,7 @@ def test_dask_ranking(client: "Client") -> None:
             d = d.toarray()
             d[d == 0] = np.nan
             d[np.isinf(d)] = 0
-            data.append(dd.from_array(d, chunksize=32))
-        else:
-            data.append(dd.from_array(d, chunksize=32))
-
+        data.append(dd.from_array(d, chunksize=32))
     (
         x_train,
         y_train,
@@ -1813,7 +1804,7 @@ class TestWithDask:
 
         def assert_shape(shape: Tuple[int, ...]) -> None:
             assert shape[0] == rows
-            if "num_class" in params.keys():
+            if "num_class" in params:
                 assert shape[1] == params["num_class"]
                 assert shape[2] == cols + 1
             else:
@@ -2033,7 +2024,7 @@ def run_tree_stats(client: Client, tree_method: str, device: str) -> str:
     stack = [model]
     while stack:
         node: dict = stack.pop()
-        if "leaf" in node.keys():
+        if "leaf" in node:
             continue
         cover = 0
         for c in node["children"]:
@@ -2243,7 +2234,7 @@ class TestDaskCallbacks:
                 ],
             )
             for i in range(1, 10):
-                assert os.path.exists(os.path.join(tmpdir, "model_" + str(i) + ".json"))
+                assert os.path.exists(os.path.join(tmpdir, f"model_{str(i)}.json"))
 
 
 @gen_cluster(client=True, clean_kwargs={"processes": False, "threads": False}, allow_unclosed=True)

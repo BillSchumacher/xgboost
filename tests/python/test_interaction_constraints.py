@@ -89,21 +89,21 @@ class TestInteractionConstraints:
         """Test accuracy, reused by GPU tests."""
         from sklearn.metrics import accuracy_score
         dtrain = xgboost.DMatrix(
-            dpath + "agaricus.txt.train?indexing_mode=1&format=libsvm"
+            f"{dpath}agaricus.txt.train?indexing_mode=1&format=libsvm"
         )
         dtest = xgboost.DMatrix(
-            dpath + "agaricus.txt.test?indexing_mode=1&format=libsvm"
+            f"{dpath}agaricus.txt.test?indexing_mode=1&format=libsvm"
         )
+        num_boost_round = 5
+
         params = {
             'eta': 1,
             'max_depth': 6,
             'objective': 'binary:logistic',
             'tree_method': tree_method,
-            'interaction_constraints': '[[1,2], [2,3,4]]'
+            'interaction_constraints': '[[1,2], [2,3,4]]',
+            'grow_policy': 'lossguide',
         }
-        num_boost_round = 5
-
-        params['grow_policy'] = 'lossguide'
         bst = xgboost.train(params, dtrain, num_boost_round)
         pred_dtest = (bst.predict(dtest) < 0.5)
         assert accuracy_score(dtest.get_label(), pred_dtest) < 0.1

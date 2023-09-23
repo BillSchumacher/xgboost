@@ -20,7 +20,7 @@ ParamT = Dict[str, str]
 
 def to_integers(data: Union[bytes, List[int]]) -> List[int]:
     """Convert a sequence of bytes to a list of Python integer"""
-    return [v for v in data]
+    return list(data)
 
 
 @unique
@@ -108,11 +108,12 @@ class Tree:
         stack = [0]
         nodes = []
         while stack:
-            node: Dict[str, Union[float, int, List[int]]] = {}
             nid = stack.pop()
 
-            node["node id"] = nid
-            node["gain"] = self.loss_change(nid)
+            node: Dict[str, Union[float, int, List[int]]] = {
+                "node id": nid,
+                "gain": self.loss_change(nid),
+            }
             node["cover"] = self.sum_hessian(nid)
             nodes.append(node)
 
@@ -121,8 +122,7 @@ class Tree:
                 right = self.right_child(nid)
                 stack.append(left)
                 stack.append(right)
-                categories = self.split_categories(nid)
-                if categories:
+                if categories := self.split_categories(nid):
                     assert self.is_categorical(nid)
                     node["categories"] = categories
                 else:
@@ -131,8 +131,7 @@ class Tree:
             if self.is_leaf(nid):
                 node["weight"] = self.split_condition(nid)
 
-        string = "\n".join(map(lambda x: "  " + str(x), nodes))
-        return string
+        return "\n".join(map(lambda x: f"  {str(x)}", nodes))
 
 
 class Model:
@@ -194,10 +193,7 @@ class Model:
             # prevent unnecessary overhead for numerical splits, we track the
             # categorical node that are processed using a counter.
             cat_cnt = 0
-            if cat_nodes:
-                last_cat_node = cat_nodes[cat_cnt]
-            else:
-                last_cat_node = -1
+            last_cat_node = cat_nodes[cat_cnt] if cat_nodes else -1
             node_categories: List[List[int]] = []
             for node_id in range(len(left_children)):
                 if node_id == last_cat_node:
@@ -208,10 +204,7 @@ class Model:
                     # categories are unique for each node
                     assert len(set(node_cats)) == len(node_cats)
                     cat_cnt += 1
-                    if cat_cnt == len(cat_nodes):
-                        last_cat_node = -1  # continue to process the rest of the nodes
-                    else:
-                        last_cat_node = cat_nodes[cat_cnt]
+                    last_cat_node = -1 if cat_cnt == len(cat_nodes) else cat_nodes[cat_cnt]
                     assert node_cats
                     node_categories.append(node_cats)
                 else:

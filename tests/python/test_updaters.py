@@ -281,7 +281,10 @@ class TestTreeMethod:
         n = 5
 
         X = pd.Series(
-            ["".join(rng.choice(list(ascii_lowercase), size=3)) for i in range(n_cat)],
+            [
+                "".join(rng.choice(list(ascii_lowercase), size=3))
+                for _ in range(n_cat)
+            ],
             dtype="category",
         )[:n].to_frame()
 

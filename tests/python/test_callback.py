@@ -391,9 +391,7 @@ class TestCallbacks:
         )
 
         def eta_decay_1(i: int) -> float:
-            if i > 1:
-                return 5.0
-            return num_round / (i + 1)
+            return 5.0 if i > 1 else num_round / (i + 1)
 
         bst1 = xgb.train(
             param,
@@ -453,7 +451,7 @@ class TestCallbacks:
                 callbacks=[check_point],
             )
             for i in range(1, 10):
-                assert os.path.exists(os.path.join(tmpdir, "model_" + str(i) + ".json"))
+                assert os.path.exists(os.path.join(tmpdir, f"model_{str(i)}.json"))
 
             check_point = xgb.callback.TrainingCheckPoint(
                 directory=tmpdir, iterations=1, as_pickle=True, name="model"
@@ -466,13 +464,13 @@ class TestCallbacks:
                 callbacks=[check_point],
             )
             for i in range(1, 10):
-                assert os.path.exists(os.path.join(tmpdir, "model_" + str(i) + ".pkl"))
+                assert os.path.exists(os.path.join(tmpdir, f"model_{str(i)}.pkl"))
 
     def test_callback_list(self):
         X, y = tm.data.get_california_housing()
         m = xgb.DMatrix(X, y)
         callbacks = [xgb.callback.EarlyStopping(rounds=10)]
-        for i in range(4):
+        for _ in range(4):
             xgb.train(
                 {"objective": "reg:squarederror", "eval_metric": "rmse"},
                 m,

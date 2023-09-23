@@ -138,11 +138,11 @@ class CallbackContainer:
             if not isinstance(cb, TrainingCallback):
                 raise TypeError("callback must be an instance of `TrainingCallback`.")
 
-        msg = (
-            "metric must be callable object for monitoring.  For builtin metrics"
-            ", passing them in training parameter invokes monitor automatically."
-        )
         if metric is not None and not callable(metric):
+            msg = (
+                "metric must be callable object for monitoring.  For builtin metrics"
+                ", passing them in training parameter invokes monitor automatically."
+            )
             raise TypeError(msg)
 
         self.metric = metric
@@ -238,8 +238,9 @@ class CallbackContainer:
             score: str = model.eval_set(evals, epoch, self.metric, self._output_margin)
             metric_score = _parse_eval_str(score)
             self._update_history(metric_score, epoch)
-        ret = any(c.after_iteration(model, epoch, self.history) for c in self.callbacks)
-        return ret
+        return any(
+            c.after_iteration(model, epoch, self.history) for c in self.callbacks
+        )
 
 
 class LearningRateScheduler(TrainingCallback):
@@ -384,16 +385,10 @@ class EarlyStopping(TrainingCallback):
                 "map@",
                 "ndcg@",
             )
-            if metric != "mape" and any(metric.startswith(x) for x in maximize_metrics):
-                self.maximize = True
-            else:
-                self.maximize = False
-
-        if self.maximize:
-            improve_op = maximize
-        else:
-            improve_op = minimize
-
+            self.maximize = metric != "mape" and any(
+                metric.startswith(x) for x in maximize_metrics
+            )
+        improve_op = maximize if self.maximize else minimize
         if not self.stopping_history:  # First round
             self.current_rounds = 0
             self.stopping_history[name] = {}
@@ -412,25 +407,18 @@ class EarlyStopping(TrainingCallback):
             model.set_attr(best_score=str(record), best_iteration=str(epoch))
             self.current_rounds = 0  # reset
 
-        if self.current_rounds >= self.rounds:
-            # Should stop
-            return True
-        return False
+        return self.current_rounds >= self.rounds
 
     def after_iteration(
         self, model: _Model, epoch: int, evals_log: TrainingCallback.EvalsLog
     ) -> bool:
         epoch += self.starting_round  # training continuation
-        msg = "Must have at least 1 validation dataset for early stopping."
         if len(evals_log.keys()) < 1:
+            msg = "Must have at least 1 validation dataset for early stopping."
             raise ValueError(msg)
 
         # Get data name
-        if self.data:
-            data_name = self.data
-        else:
-            # Use the last one as default.
-            data_name = list(evals_log.keys())[-1]
+        data_name = self.data if self.data else list(evals_log.keys())[-1]
         if data_name not in evals_log:
             raise ValueError(f"No dataset named: {data_name}")
 
@@ -500,11 +488,11 @@ class EvaluationMonitor(TrainingCallback):
     def _fmt_metric(
         self, data: str, metric: str, score: float, std: Optional[float]
     ) -> str:
-        if std is not None and self.show_stdv:
-            msg = f"\t{data + '-' + metric}:{score:.5f}+{std:.5f}"
-        else:
-            msg = f"\t{data + '-' + metric}:{score:.5f}"
-        return msg
+        return (
+            f"\t{data}-{metric}:{score:.5f}+{std:.5f}"
+            if std is not None and self.show_stdv
+            else f"\t{data}-{metric}:{score:.5f}"
+        )
 
     def after_iteration(
         self, model: _Model, epoch: int, evals_log: TrainingCallback.EvalsLog
@@ -512,8 +500,8 @@ class EvaluationMonitor(TrainingCallback):
         if not evals_log:
             return False
 
-        msg: str = f"[{epoch}]"
         if collective.get_rank() == self.printer_rank:
+            msg: str = f"[{epoch}]"
             for data, metric in evals_log.items():
                 for metric_name, log in metric.items():
                     stdv: Optional[float] = None

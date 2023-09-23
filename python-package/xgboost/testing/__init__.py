@@ -240,10 +240,7 @@ class IteratorForTest(xgb.core.DataIter):
         else:
             X = np.concatenate(self.X, axis=0)
         y = np.concatenate(self.y, axis=0)
-        if self.w:
-            w = np.concatenate(self.w, axis=0)
-        else:
-            w = None
+        w = np.concatenate(self.w, axis=0) if self.w else None
         return X, y, w
 
 
@@ -758,8 +755,7 @@ def eval_error_metric_skl(y_true: np.ndarray, y_score: np.ndarray) -> np.float64
 
 def root_mean_square(y_true: np.ndarray, y_score: np.ndarray) -> float:
     err = y_score - y_true
-    rmse = np.sqrt(np.dot(err, err) / y_score.size)
-    return rmse
+    return np.sqrt(np.dot(err, err) / y_score.size)
 
 
 def softmax(x: np.ndarray) -> np.ndarray:

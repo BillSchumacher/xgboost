@@ -38,7 +38,9 @@ def pack_rpackage() -> Path:
         raise ValueError("Failed to check git repository status.", output)
     would_remove = output.stdout.decode("utf-8").strip().split("\n")
 
-    if would_remove and not all(f.find("tests/ci_build") != -1 for f in would_remove):
+    if would_remove and any(
+        f.find("tests/ci_build") == -1 for f in would_remove
+    ):
         raise ValueError(
             "\n".join(would_remove) + "\nPlease cleanup the working git repository."
         )
@@ -96,7 +98,7 @@ def build_rpackage(path: str) -> str:
 
     env = os.environ.copy()
     print("Ncpus:", f"{os.cpu_count()}")
-    env.update({"MAKEFLAGS": f"-j{os.cpu_count()}"})
+    env["MAKEFLAGS"] = f"-j{os.cpu_count()}"
     subprocess.check_call([R, "CMD", "build", path], env=env)
 
     tarball = find_tarball()
@@ -122,8 +124,6 @@ def check_example_timing(rcheck_dir: Path, threshold: float) -> None:
         offending.to_markdown("offending.md")
     except ImportError:
         print("failed to export markdown files.")
-        pass
-
     if offending.shape[0] == 0:
         return
 
@@ -193,7 +193,7 @@ def check_rpackage(path: str) -> None:
 def check_rmarkdown() -> None:
     assert system() != "Windows", "Document test doesn't support Windows."
     env = os.environ.copy()
-    env.update({"MAKEFLAGS": f"-j{os.cpu_count()}"})
+    env["MAKEFLAGS"] = f"-j{os.cpu_count()}"
     print("Checking R documentation.")
     bin_dir = os.path.dirname(R)
     rscript = os.path.join(bin_dir, "Rscript")

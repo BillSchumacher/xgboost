@@ -29,9 +29,7 @@ alias = Alias("values", "label", "weight", "baseMargin", "validationIndicator", 
 
 def concat_or_none(seq: Optional[Sequence[np.ndarray]]) -> Optional[np.ndarray]:
     """Concatenate the data if it's not None."""
-    if seq:
-        return concat(seq)
-    return None
+    return concat(seq) if seq else None
 
 
 def cache_partitions(
@@ -128,7 +126,6 @@ def _read_csr_matrix_from_unwrapped_spark_vec(part: pd.DataFrame) -> csr_matrix:
             # sparse vector
             vec_size = int(vec_size_)
             csr_indices = vec_indices
-            csr_values = vec_values
         else:
             # dense vector
             # Note: According to spark ML VectorUDT format,
@@ -136,8 +133,7 @@ def _read_csr_matrix_from_unwrapped_spark_vec(part: pd.DataFrame) -> csr_matrix:
             # we need to check the values field to get vector length.
             vec_size = len(vec_values)
             csr_indices = np.arange(vec_size, dtype=np.int32)
-            csr_values = vec_values
-
+        csr_values = vec_values
         if n_features == 0:
             n_features = vec_size
         assert n_features == vec_size
@@ -166,8 +162,7 @@ def make_qdm(
     if not data:
         return QuantileDMatrix(np.empty((0, 0)), ref=ref)
     it = PartIter(data, dev_ordinal, **meta)
-    m = QuantileDMatrix(it, **params, ref=ref)
-    return m
+    return QuantileDMatrix(it, **params, ref=ref)
 
 
 def create_dmatrix_from_partitions(  # pylint: disable=too-many-arguments
@@ -256,7 +251,7 @@ def create_dmatrix_from_partitions(  # pylint: disable=too-many-arguments
                 train_data[name].append(array)
 
     def make(values: Dict[str, List[np.ndarray]], kwargs: Dict[str, Any]) -> DMatrix:
-        if len(values) == 0:
+        if not values:
             get_logger("XGBoostPySpark").warning(
                 "Detected an empty partition in the training data. Consider to enable"
                 " repartition_random_shuffle"

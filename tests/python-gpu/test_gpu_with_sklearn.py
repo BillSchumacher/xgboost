@@ -159,20 +159,14 @@ def test_classififer():
         clf.fit(X, y)
 
 
-@pytest.mark.parametrize(
-    "use_cupy,tree_method,device,order,gdtype,strategy",
-    [
-        c
-        for c in itertools.product(
+@pytest.mark.parametrize("use_cupy,tree_method,device,order,gdtype,strategy", list(itertools.product(
             (True, False),
             ("hist", "approx"),
             ("cpu", "cuda"),
             ("C", "F"),
             ("float64", "float32"),
             ("one_output_per_tree", "multi_output_tree"),
-        )
-    ],
-)
+        )))
 def test_custom_objective(
     use_cupy: bool,
     tree_method: str,

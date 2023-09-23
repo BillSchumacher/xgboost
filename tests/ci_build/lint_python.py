@@ -186,7 +186,7 @@ class PyLint:
     @staticmethod
     def print_summary_map(result_map: Dict[str, Dict[str, int]]) -> int:
         """Print summary of certain result map."""
-        if len(result_map) == 0:
+        if not result_map:
             return 0
 
         ftype = "Python"

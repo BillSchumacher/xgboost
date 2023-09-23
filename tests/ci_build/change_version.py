@@ -42,9 +42,9 @@ def pypkg(
     version = f"{major}.{minor}.{patch}"
     pyver = version
     if is_rc:
-        pyver = pyver + f"rc{rc}"
+        pyver = f"{pyver}rc{rc}"
     if is_dev:
-        pyver = pyver + "-dev"
+        pyver = f"{pyver}-dev"
 
     pyver_path = os.path.join("xgboost", "VERSION")
     with open(pyver_path, "w") as fd:

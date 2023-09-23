@@ -107,9 +107,7 @@ class TestGPUPredict:
         X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=123)
         dtrain = xgb.DMatrix(X_train, label=y_train)
 
-        params = {}
-        params["tree_method"] = "hist"
-        params["device"] = "cuda:0"
+        params = {"tree_method": "hist", "device": "cuda:0"}
         bst = xgb.train(params, dtrain)
 
         bst.set_param({"device": "cuda:0"})
@@ -229,7 +227,7 @@ class TestGPUPredict:
         cp.random.set_random_state(cp_rng)
 
         X = cp.random.randn(rows, cols)
-        missing_idx = [i for i in range(0, cols, 4)]
+        missing_idx = list(range(0, cols, 4))
         X[:, missing_idx] = missing  # set to be missing
         y = cp.random.randn(rows)
 
@@ -268,7 +266,7 @@ class TestGPUPredict:
         X = cp_rng.randn(100, 10000)
         y = cp_rng.randn(100)
 
-        missing_idx = [i for i in range(0, X.shape[1], 16)]
+        missing_idx = list(range(0, X.shape[1], 16))
         X[:, missing_idx] = missing
         reg = xgb.XGBRegressor(
             tree_method="hist", n_estimators=8, missing=missing, device=f"cuda:{device}"

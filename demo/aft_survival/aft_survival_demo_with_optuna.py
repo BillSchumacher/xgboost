@@ -52,21 +52,20 @@ def objective(trial):
     bst = xgb.train(params, dtrain, num_boost_round=10000,
                     evals=[(dtrain, 'train'), (dvalid, 'valid')],
                     early_stopping_rounds=50, verbose_eval=False, callbacks=[pruning_callback])
-    if bst.best_iteration >= 25:
-        return bst.best_score
-    else:
-        return np.inf  # Reject models with < 25 trees
+    return bst.best_score if bst.best_iteration >= 25 else np.inf
 
 # Run hyperparameter search
 study = optuna.create_study(direction='minimize')
 study.optimize(objective, n_trials=200)
-print('Completed hyperparameter tuning with best aft-nloglik = {}.'.format(study.best_trial.value))
+print(
+    f'Completed hyperparameter tuning with best aft-nloglik = {study.best_trial.value}.'
+)
 params = {}
 params.update(base_params)
 params.update(study.best_trial.params)
 
 # Re-run training with the best hyperparameter combination
-print('Re-running the best trial... params = {}'.format(params))
+print(f'Re-running the best trial... params = {params}')
 bst = xgb.train(params, dtrain, num_boost_round=10000,
                 evals=[(dtrain, 'train'), (dvalid, 'valid')],
                 early_stopping_rounds=50)

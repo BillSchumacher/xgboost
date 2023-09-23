@@ -38,13 +38,15 @@ def create_or_update_stack(
             response = client.update_stack(**kwargs)
             return {"StackName": stack_name, "Action": "update"}
         except botocore.exceptions.ClientError as e:
-            if e.response["Error"]["Code"] == "ValidationError" and re.search(
-                "No updates are to be performed", e.response["Error"]["Message"]
+            if e.response["Error"][
+                "Code"
+            ] != "ValidationError" or not re.search(
+                "No updates are to be performed",
+                e.response["Error"]["Message"],
             ):
-                print(f"No update was made to {stack_name}")
-                return {"StackName": stack_name, "Action": "noop"}
-            else:
                 raise e
+            print(f"No update was made to {stack_name}")
+            return {"StackName": stack_name, "Action": "noop"}
     else:
         kwargs.update({"OnFailure": "ROLLBACK", "EnableTerminationProtection": False})
         response = client.create_stack(**kwargs)

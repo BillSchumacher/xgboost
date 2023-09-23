@@ -25,8 +25,7 @@ def get_devices():
     assert completed.returncode == 0, "Failed to execute discovery script."
     msg = completed.stdout.decode("utf-8")
     result = json.loads(msg)
-    addresses = result["addresses"]
-    return addresses
+    return result["addresses"]
 
 
 executor_gpu_amount = len(get_devices())
@@ -70,7 +69,7 @@ def spark_iris_dataset(spark_session_with_gpu):
     data = sklearn.datasets.load_iris()
     train_rows = [
         (Vectors.dense(features), float(label))
-        for features, label in zip(data.data[0::2], data.target[0::2])
+        for features, label in zip(data.data[::2], data.target[::2])
     ]
     train_df = spark.createDataFrame(
         spark.sparkContext.parallelize(train_rows, num_workers), ["features", "label"]
@@ -91,7 +90,7 @@ def spark_iris_dataset_feature_cols(spark_session_with_gpu):
     data = sklearn.datasets.load_iris()
     train_rows = [
         (*features.tolist(), float(label))
-        for features, label in zip(data.data[0::2], data.target[0::2])
+        for features, label in zip(data.data[::2], data.target[::2])
     ]
     train_df = spark.createDataFrame(
         spark.sparkContext.parallelize(train_rows, num_workers),
@@ -114,7 +113,7 @@ def spark_diabetes_dataset(spark_session_with_gpu):
     data = sklearn.datasets.load_diabetes()
     train_rows = [
         (Vectors.dense(features), float(label))
-        for features, label in zip(data.data[0::2], data.target[0::2])
+        for features, label in zip(data.data[::2], data.target[::2])
     ]
     train_df = spark.createDataFrame(
         spark.sparkContext.parallelize(train_rows, num_workers), ["features", "label"]
@@ -135,7 +134,7 @@ def spark_diabetes_dataset_feature_cols(spark_session_with_gpu):
     data = sklearn.datasets.load_diabetes()
     train_rows = [
         (*features.tolist(), float(label))
-        for features, label in zip(data.data[0::2], data.target[0::2])
+        for features, label in zip(data.data[::2], data.target[::2])
     ]
     train_df = spark.createDataFrame(
         spark.sparkContext.parallelize(train_rows, num_workers),

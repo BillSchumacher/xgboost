@@ -101,7 +101,7 @@ def run_with_dask_dataframe(DMatrixT: Type, client: Client) -> None:
     X["inplace_predict"] = series_predictions
 
     has_null = X.isnull().values.any().compute()
-    assert bool(has_null) is False
+    assert not bool(has_null)
 
 
 def run_with_dask_array(DMatrixT: Type, client: Client) -> None:
@@ -140,11 +140,11 @@ def run_with_dask_array(DMatrixT: Type, client: Client) -> None:
 def to_cp(x: Any, DMatrixT: Type) -> Any:
     import cupy
 
-    if isinstance(x, np.ndarray) and DMatrixT is dxgb.DaskQuantileDMatrix:
-        X = cupy.array(x)
-    else:
-        X = x
-    return X
+    return (
+        cupy.array(x)
+        if isinstance(x, np.ndarray) and DMatrixT is dxgb.DaskQuantileDMatrix
+        else x
+    )
 
 
 def run_gpu_hist(
@@ -189,9 +189,7 @@ def run_gpu_hist(
     )["history"]["train"][dataset.metric]
     note(str(history))
 
-    # See note on `ObjFunction::UpdateTreeLeaf`.
-    update_leaf = dataset.name.endswith("-l1")
-    if update_leaf:
+    if update_leaf := dataset.name.endswith("-l1"):
         assert history[0] + 1e-2 >= history[-1]
         return
     else:

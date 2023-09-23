@@ -12,6 +12,7 @@ In addition, The demo showcases using GPU with other GPU-related libraries inclu
 cupy and cuml. These libraries are not strictly required.
 
 """
+
 import time
 
 import cupy as cp
@@ -40,10 +41,10 @@ clf = xgb.XGBClassifier(device="cuda", n_estimators=num_round)
 start = time.time()
 clf.fit(X_train, y_train, eval_set=[(X_test, y_test)])
 gpu_res = clf.evals_result()
-print("GPU Training Time: %s seconds" % (str(time.time() - start)))
+print(f"GPU Training Time: {str(time.time() - start)} seconds")
 
 # Repeat for CPU algorithm
 clf = xgb.XGBClassifier(device="cpu", n_estimators=num_round)
 start = time.time()
 cpu_res = clf.evals_result()
-print("CPU Training Time: %s seconds" % (str(time.time() - start)))
+print(f"CPU Training Time: {str(time.time() - start)} seconds")

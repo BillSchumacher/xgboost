@@ -16,10 +16,7 @@ from urllib.request import urlretrieve
 def normpath(path):
     """Normalize UNIX path to a native path."""
     normalized = os.path.join(*path.split("/"))
-    if os.path.isabs(path):
-        return os.path.abspath("/") + normalized
-    else:
-        return normalized
+    return os.path.abspath("/") + normalized if os.path.isabs(path) else normalized
 
 def cp(source, target):
     source = normpath(source)
@@ -29,7 +26,7 @@ def cp(source, target):
 
 def maybe_makedirs(path):
     path = normpath(path)
-    print("mkdir -p " + path)
+    print(f"mkdir -p {path}")
     try:
         os.makedirs(path)
     except OSError as e:
@@ -41,7 +38,7 @@ def cd(path):
     path = normpath(path)
     cwd = os.getcwd()
     os.chdir(path)
-    print("cd " + path)
+    print(f"cd {path}")
     try:
         yield path
     finally:
@@ -61,10 +58,10 @@ def get_current_commit_hash():
 
 def get_current_git_branch():
     out = subprocess.check_output(["git", "log", "-n", "1", "--pretty=%d", "HEAD"])
-    m = re.search(r"release_[0-9\.]+", out.decode())
-    if not m:
+    if m := re.search(r"release_[0-9\.]+", out.decode()):
+        return m.group(0)
+    else:
         raise ValueError("Expected branch name of form release_xxx")
-    return m.group(0)
 
 def retrieve(url, filename=None):
     print(f"{url} -> {filename}")
@@ -80,7 +77,7 @@ def main():
         raise NotImplementedError("Please run this script using an Intel Mac")
 
     version = args.release_version
-    expected_git_tag = "v" + version
+    expected_git_tag = f"v{version}"
     current_git_tag = get_current_git_tag()
     if current_git_tag != expected_git_tag:
         if not current_git_tag:

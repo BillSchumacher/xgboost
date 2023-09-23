@@ -122,9 +122,7 @@ def _parse_eval_str(result: str) -> List[Tuple[str, float]]:
     splited = result.split()[1:]
     # split up `test-error:0.1234`
     metric_score_str = [tuple(s.split(":")) for s in splited]
-    # convert to float
-    metric_score = [(n, float(s)) for n, s in metric_score_str]
-    return metric_score
+    return [(n, float(s)) for n, s in metric_score_str]
 
 
 IterRange = TypeVar("IterRange", Optional[Tuple[int, int]], Tuple[int, int])
@@ -149,7 +147,7 @@ def _expect(expectations: Sequence[Type], got: Type) -> str:
         msg += str(expectations[t])
         msg += " or "
     msg += str(expectations[-1])
-    msg += ".  Got " + str(got)
+    msg += f".  Got {str(got)}"
     return msg
 
 
@@ -310,7 +308,7 @@ def _validate_feature_info(
             f"Expecting a sequence of strings for {name}, got: {type(feature_info)}"
         )
     feature_info = list(feature_info)
-    if len(feature_info) != n_features and n_features != 0:
+    if len(feature_info) != n_features != 0:
         msg = (
             f"{name} must have the same length as the number of data columns, ",
             f"expected {n_features}, got {len(feature_info)}",
@@ -361,8 +359,7 @@ def _cuda_array_interface(data: DataType) -> bytes:
     interface = data.__cuda_array_interface__
     if "mask" in interface:
         interface["mask"] = interface["mask"].__cuda_array_interface__
-    interface_str = bytes(json.dumps(interface), "utf-8")
-    return interface_str
+    return bytes(json.dumps(interface), "utf-8")
 
 
 def ctypes2numpy(cptr: CNumericPtr, length: int, dtype: Type[np.number]) -> np.ndarray:
@@ -400,8 +397,7 @@ def ctypes2cupy(cptr: CNumericPtr, length: int, dtype: Type[np.number]) -> CupyT
     # pylint: disable=unexpected-keyword-arg
     mem = cupy.ndarray((length,), dtype=dtype, memptr=memptr)
     assert mem.device.id == device
-    arr = cupy.array(mem, copy=True)
-    return arr
+    return cupy.array(mem, copy=True)
 
 
 def ctypes2buffer(cptr: CStrPtr, length: int) -> bytearray:
@@ -469,12 +465,10 @@ def from_array_interface(interface: dict) -> NumpyOrCupy:
         import cupy as cp  # pylint: disable=import-error
 
         arr.__cuda_array_interface__ = interface
-        out = cp.array(arr, copy=True)
+        return cp.array(arr, copy=True)
     else:
         arr.__array_interface__ = interface
-        out = np.array(arr, copy=True)
-
-    return out
+        return np.array(arr, copy=True)
 
 
 def _prediction_output(
@@ -1174,10 +1168,9 @@ class DMatrix:  # pylint: disable=too-many-instance-attributes,too-many-public-m
         _check_call(
             _LIB.XGDMatrixGetDataAsCSR(self.handle, config, c_indptr, c_indices, c_data)
         )
-        ret = scipy.sparse.csr_matrix(
+        return scipy.sparse.csr_matrix(
             (data, indices, indptr), shape=(self.num_row(), self.num_col())
         )
-        return ret
 
     def get_quantile_cut(self) -> Tuple[np.ndarray, np.ndarray]:
         """Get quantile cuts for quantization.
@@ -1282,9 +1275,7 @@ class DMatrix:  # pylint: disable=too-many-instance-attributes,too-many-public-m
             )
         )
         feature_names = from_cstr_to_pystr(sarr, length)
-        if not feature_names:
-            return None
-        return feature_names
+        return None if not feature_names else feature_names
 
     @feature_names.setter
     def feature_names(self, feature_names: Optional[FeatureNames]) -> None:
@@ -1314,7 +1305,7 @@ class DMatrix:  # pylint: disable=too-many-instance-attributes,too-many-public-m
 
         # prohibit the use symbols that may affect parsing. e.g. []<
         if not all(
-            isinstance(f, str) and not any(x in f for x in ["[", "]", "<"])
+            isinstance(f, str) and all(x not in f for x in ["[", "]", "<"])
             for f in feature_names
         ):
             raise ValueError(
@@ -1355,9 +1346,7 @@ class DMatrix:  # pylint: disable=too-many-instance-attributes,too-many-public-m
             )
         )
         res = from_cstr_to_pystr(sarr, length)
-        if not res:
-            return None
-        return res
+        return None if not res else res
 
     @feature_types.setter
     def feature_types(self, feature_types: Optional[FeatureTypes]) -> None:
@@ -1558,11 +1547,7 @@ class QuantileDMatrix(DMatrix):
             # We specialize for dlpack because cupy will take the memory from it so
             # it can't be transformed twice.
             data = _transform_dlpack(data)
-        if _is_iter(data):
-            it = data
-        else:
-            it = SingleBatchInternalIter(data=data, **meta)
-
+        it = data if _is_iter(data) else SingleBatchInternalIter(data=data, **meta)
         handle = ctypes.c_void_p()
         reset_callback, next_callback = it.get_callbacks(True, enable_categorical)
         if it.cache_prefix is not None:
@@ -1676,9 +1661,7 @@ class Booster:
             self.__dict__.update(state)
         elif isinstance(model_file, (str, os.PathLike, bytearray)):
             self.load_model(model_file)
-        elif model_file is None:
-            pass
-        else:
+        elif model_file is not None:
             raise TypeError("Unknown type:", model_file)
 
         params = params or {}
@@ -1718,12 +1701,10 @@ class Booster:
         }
 
         try:
-            result = []
-            for constraint in value:
-                result.append(
-                    [feature_idx_mapping[feature_name] for feature_name in constraint]
-                )
-            return result
+            return [
+                [feature_idx_mapping[feature_name] for feature_name in constraint]
+                for constraint in value
+            ]
         except KeyError as e:
             raise ValueError(
                 "Constrained features are not a subset of training data feature names"
@@ -1850,8 +1831,7 @@ class Booster:
             )
         )
         assert json_string.value is not None
-        result = json_string.value.decode()  # pylint: disable=no-member
-        return result
+        return json_string.value.decode()
 
     def load_config(self, config: str) -> None:
         """Load configuration returned by `save_config`.
@@ -2539,7 +2519,7 @@ class Booster:
             return _prediction_output(shape, dims, preds, True)
 
         raise TypeError(
-            "Data type:" + str(type(data)) + " not supported by inplace prediction."
+            f"Data type:{str(type(data))} not supported by inplace prediction."
         )
 
     def save_model(self, fname: Union[str, os.PathLike]) -> None:
@@ -2752,8 +2732,7 @@ class Booster:
                 ctypes.byref(sarr),
             )
         )
-        res = from_cstr_to_pystr(sarr, length)
-        return res
+        return from_cstr_to_pystr(sarr, length)
 
     def get_fscore(
         self, fmap: Union[str, os.PathLike] = ""
@@ -2829,13 +2808,12 @@ class Booster:
         features_arr = from_cstr_to_pystr(features, n_out_features)
         scores_arr = _prediction_output(shape, out_dim, scores, False)
 
-        results: Dict[str, Union[float, List[float]]] = {}
-        if len(scores_arr.shape) > 1 and scores_arr.shape[1] > 1:
-            for feat, score in zip(features_arr, scores_arr):
-                results[feat] = [float(s) for s in score]
-        else:
-            for feat, score in zip(features_arr, scores_arr):
-                results[feat] = float(score)
+        results: Dict[str, Union[float, List[float]]] = {
+            feat: [float(s) for s in score]
+            if len(scores_arr.shape) > 1 and scores_arr.shape[1] > 1
+            else float(score)
+            for feat, score in zip(features_arr, scores_arr)
+        }
         return results
 
     # pylint: disable=too-many-statements
@@ -2888,8 +2866,6 @@ class Booster:
                     parse = arr[0].split(":")
                     stats = re.split("=|,", parse[1])
 
-                    # append to lists
-                    tree_ids.append(i)
                     node_ids.append(int(re.findall(r"\b\d+\b", parse[0])[0]))
                     fids.append("Leaf")
                     splits.append(float("NAN"))
@@ -2899,7 +2875,6 @@ class Booster:
                     missings.append(float("NAN"))
                     gains.append(float(stats[1]))
                     covers.append(float(stats[3]))
-                # Not a Leaf Node
                 else:
                     # parse string
                     fid = arr[1].split("]")
@@ -2919,18 +2894,18 @@ class Booster:
                         raise ValueError("Failed to parse model text dump.")
                     stats = re.split("=|,", fid[1])
 
-                    # append to lists
-                    tree_ids.append(i)
                     node_ids.append(int(re.findall(r"\b\d+\b", arr[0])[0]))
                     fids.append(parse[0])
                     str_i = str(i)
-                    y_directs.append(str_i + "-" + stats[1])
-                    n_directs.append(str_i + "-" + stats[3])
-                    missings.append(str_i + "-" + stats[5])
+                    y_directs.append(f"{str_i}-{stats[1]}")
+                    n_directs.append(f"{str_i}-{stats[3]}")
+                    missings.append(f"{str_i}-{stats[5]}")
                     gains.append(float(stats[7]))
                     covers.append(float(stats[9]))
 
-        ids = [str(t_id) + "-" + str(n_id) for t_id, n_id in zip(tree_ids, node_ids)]
+                # append to lists
+                tree_ids.append(i)
+        ids = [f"{str(t_id)}-{str(n_id)}" for t_id, n_id in zip(tree_ids, node_ids)]
         df = DataFrame(
             {
                 "Tree": tree_ids,
@@ -2971,7 +2946,7 @@ class Booster:
         if self.feature_names is None:
             return
 
-        if feature_names is None and self.feature_names is not None:
+        if feature_names is None:
             raise ValueError(
                 "training data did not have the following fields: "
                 + ", ".join(self.feature_names)
@@ -3062,9 +3037,9 @@ class Booster:
                     "Split value historgam doesn't support categorical split."
                 )
 
-        if as_pandas and PANDAS_INSTALLED:
-            return DataFrame(nph_stacked, columns=["SplitValue", "Count"])
-        if as_pandas and not PANDAS_INSTALLED:
+        if as_pandas:
+            if PANDAS_INSTALLED:
+                return DataFrame(nph_stacked, columns=["SplitValue", "Count"])
             warnings.warn(
                 "Returning histogram as ndarray"
                 " (as_pandas == True, but pandas is not installed).",

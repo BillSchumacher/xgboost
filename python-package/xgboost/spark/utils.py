@@ -30,15 +30,14 @@ def _get_default_params_from_func(
 
     """
     sig = inspect.signature(func)
-    filtered_params_dict = {}
-    for parameter in sig.parameters.values():
-        # Remove parameters without a default value and those in the unsupported_set
+    return {
+        parameter.name: parameter.default
+        for parameter in sig.parameters.values()
         if (
             parameter.default is not parameter.empty
             and parameter.name not in unsupported_set
-        ):
-            filtered_params_dict[parameter.name] = parameter.default
-    return filtered_params_dict
+        )
+    }
 
 
 class CommunicatorContext:
@@ -74,8 +73,7 @@ def _start_tracker(context: BarrierTaskContext, n_workers: int) -> Dict[str, Any
 
 def _get_rabit_args(context: BarrierTaskContext, n_workers: int) -> Dict[str, Any]:
     """Get rabit context arguments to send to each worker."""
-    env = _start_tracker(context, n_workers)
-    return env
+    return _start_tracker(context, n_workers)
 
 
 def _get_host_ip(context: BarrierTaskContext) -> str:

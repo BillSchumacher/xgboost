@@ -202,9 +202,13 @@ class TestModels:
     def test_multi_eval_metric(self):
         dtrain, dtest = tm.load_agaricus(__file__)
         watchlist = [(dtest, 'eval'), (dtrain, 'train')]
-        param = {'max_depth': 2, 'eta': 0.2, 'verbosity': 1,
-                 'objective': 'binary:logistic'}
-        param['eval_metric'] = ["auc", "logloss", 'error']
+        param = {
+            'max_depth': 2,
+            'eta': 0.2,
+            'verbosity': 1,
+            'objective': 'binary:logistic',
+            'eval_metric': ["auc", "logloss", 'error'],
+        }
         evals_result = {}
         bst = xgb.train(param, dtrain, 4, watchlist, evals_result=evals_result)
         assert isinstance(bst, xgb.core.Booster)
@@ -298,7 +302,7 @@ class TestModels:
             pytest.skip(tm.no_ubjson()["reason"])
 
         loc = locale.getpreferredencoding(False)
-        model_path = 'test_model_json_io.' + ext
+        model_path = f'test_model_json_io.{ext}'
         j_model = json_model(model_path, parameters)
         assert isinstance(j_model['learner'], dict)
 
@@ -400,10 +404,9 @@ class TestModels:
             objectives = [s.split(': ')[1] for s in splited]
             j_objectives = schema['properties']['learner']['properties'][
                 'objective']['oneOf']
-            objectives_from_schema = set()
-            for j_obj in j_objectives:
-                objectives_from_schema.add(
-                    j_obj['properties']['name']['const'])
+            objectives_from_schema = {
+                j_obj['properties']['name']['const'] for j_obj in j_objectives
+            }
             objectives = set(objectives)
             assert objectives == objectives_from_schema
 
@@ -554,7 +557,7 @@ class TestModels:
         with pytest.raises(ValueError, match=r".*>= 1.*"):
             booster[0:2:0]
 
-        trees = [_ for _ in booster]
+        trees = list(booster)
         assert len(trees) == num_boost_round
 
         with pytest.raises(TypeError):
@@ -661,7 +664,7 @@ class TestModels:
             dtrain=Xy,
             callbacks=[ResetStrategy()]
         )
-        sliced = [t for t in booster]
+        sliced = list(booster)
         assert len(sliced) == 16
 
         predt0 = booster.predict(Xy, output_margin=True)
@@ -678,9 +681,9 @@ class TestModels:
         cols = 10
         X = rng.randn(rows, cols)
         y = rng.randn(rows)
-        feature_names = ["test_feature_" + str(i) for i in range(cols)]
+        feature_names = [f"test_feature_{str(i)}" for i in range(cols)]
         X_pd = pd.DataFrame(X, columns=feature_names)
-        X_pd[f"test_feature_{3}"] = X_pd.iloc[:, 3].astype(np.int32)
+        X_pd['test_feature_3'] = X_pd.iloc[:, 3].astype(np.int32)
 
         Xy = xgb.DMatrix(X_pd, y)
         assert Xy.feature_types[3] == "int"
@@ -691,7 +694,7 @@ class TestModels:
         assert booster.feature_types == Xy.feature_types
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            path = tmpdir + "model.json"
+            path = f"{tmpdir}model.json"
             booster.save_model(path)
             booster = xgb.Booster()
             booster.load_model(path)

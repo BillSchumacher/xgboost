@@ -115,25 +115,23 @@ def plot_importance(
     ylocs = np.arange(len(values))
     ax.barh(ylocs, values, align="center", height=height, **kwargs)
 
-    if show_values is True:
+    if show_values:
         for x, y in zip(values, ylocs):
             ax.text(x + 1, y, values_format.format(v=x), va="center")
 
     ax.set_yticks(ylocs)
     ax.set_yticklabels(labels)
 
-    if xlim is not None:
-        if not isinstance(xlim, tuple) or len(xlim) != 2:
-            raise ValueError("xlim must be a tuple of 2 elements")
-    else:
+    if xlim is None:
         xlim = (0, max(values) * 1.1)
+    elif not isinstance(xlim, tuple) or len(xlim) != 2:
+        raise ValueError("xlim must be a tuple of 2 elements")
     ax.set_xlim(xlim)
 
-    if ylim is not None:
-        if not isinstance(ylim, tuple) or len(ylim) != 2:
-            raise ValueError("ylim must be a tuple of 2 elements")
-    else:
+    if ylim is None:
         ylim = (-1, len(values))
+    elif not isinstance(ylim, tuple) or len(ylim) != 2:
+        raise ValueError("ylim must be a tuple of 2 elements")
     ax.set_ylim(ylim)
 
     if title is not None:
@@ -210,10 +208,7 @@ def to_graphviz(
 
     # squash everything back into kwargs again for compatibility
     parameters = "dot"
-    extra = {}
-    for key, value in kwargs.items():
-        extra[key] = value
-
+    extra = dict(kwargs)
     if rankdir is not None:
         kwargs["graph_attrs"] = {}
         kwargs["graph_attrs"]["rankdir"] = rankdir
@@ -240,8 +235,7 @@ def to_graphviz(
         parameters += ":"
         parameters += json.dumps(kwargs)
     tree = booster.get_dump(fmap=fmap, dump_format=parameters)[num_trees]
-    g = Source(tree)
-    return g
+    return Source(tree)
 
 
 def plot_tree(

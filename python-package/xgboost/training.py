@@ -44,8 +44,7 @@ def _configure_custom_metric(
         raise ValueError(
             "Both `feval` and `custom_metric` are supplied.  Use `custom_metric` instead."
         )
-    eval_metric = custom_metric if custom_metric is not None else feval
-    return eval_metric
+    return custom_metric if custom_metric is not None else feval
 
 
 @_deprecate_positional_args
@@ -232,8 +231,7 @@ class _PackedBooster:
         self, iteration: int, feval: Optional[Metric], output_margin: bool
     ) -> List[str]:
         """Iterate through folds for eval"""
-        result = [f.eval(iteration, feval, output_margin) for f in self.cvfolds]
-        return result
+        return [f.eval(iteration, feval, output_margin) for f in self.cvfolds]
 
     def set_attr(self, **kwargs: Optional[Any]) -> Any:
         """Iterate through folds for setting attributes"""
@@ -303,7 +301,7 @@ def mkgroupfold(
     group_boundaries = dall.get_uint_info("group_ptr")
     group_sizes = np.diff(group_boundaries)
 
-    if shuffle is True:
+    if shuffle:
         idx = np.random.permutation(len(group_sizes))
     else:
         idx = np.arange(len(group_sizes))
@@ -364,7 +362,7 @@ def mknfold(
                 dall, nfold, param, evals=evals, fpreproc=fpreproc, shuffle=shuffle
             )
 
-        if shuffle is True:
+        if shuffle:
             idx = np.random.permutation(dall.num_row())
         else:
             idx = np.arange(dall.num_row())
@@ -516,7 +514,7 @@ def cv(
     -------
     evaluation history : list(string)
     """
-    if stratified is True and not SKLEARN_INSTALLED:
+    if stratified and not SKLEARN_INSTALLED:
         raise XGBoostError(
             "sklearn needs to be installed in order to use stratified cv"
         )
@@ -572,15 +570,15 @@ def cv(
         should_break = callbacks_container.after_iteration(booster, i, dtrain, None)
         res = callbacks_container.aggregated_cv
         for key, mean, std in cast(List[Tuple[str, float, float]], res):
-            if key + "-mean" not in results:
-                results[key + "-mean"] = []
-            if key + "-std" not in results:
-                results[key + "-std"] = []
-            results[key + "-mean"].append(mean)
-            results[key + "-std"].append(std)
+            if f"{key}-mean" not in results:
+                results[f"{key}-mean"] = []
+            if f"{key}-std" not in results:
+                results[f"{key}-std"] = []
+            results[f"{key}-mean"].append(mean)
+            results[f"{key}-std"].append(std)
 
         if should_break:
-            for k in results.keys():  # pylint: disable=consider-iterating-dictionary
+            for k in results:  # pylint: disable=consider-iterating-dictionary
                 results[k] = results[k][: (booster.best_iteration + 1)]
             break
     if as_pandas:

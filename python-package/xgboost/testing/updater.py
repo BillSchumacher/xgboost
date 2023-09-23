@@ -11,12 +11,11 @@ import xgboost.testing as tm
 
 def get_basescore(model: xgb.XGBModel) -> float:
     """Get base score from an XGBoost sklearn estimator."""
-    base_score = float(
-        json.loads(model.get_booster().save_config())["learner"]["learner_model_param"][
-            "base_score"
-        ]
+    return float(
+        json.loads(model.get_booster().save_config())["learner"][
+            "learner_model_param"
+        ]["base_score"]
     )
-    return base_score
 
 
 def check_init_estimation(tree_method: str) -> None:
@@ -94,11 +93,7 @@ def check_quantile_loss(tree_method: str, weighted: bool) -> None:
         n_features=n_features,
         random_state=rng,
     )
-    if weighted:
-        weight = rng.random(size=n_samples)
-    else:
-        weight = None
-
+    weight = rng.random(size=n_samples) if weighted else None
     Xy = xgb.QuantileDMatrix(X, y, weight=weight)
 
     alpha = np.array([0.1, 0.5])

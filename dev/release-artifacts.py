@@ -60,8 +60,7 @@ def latest_hash() -> str:
     "Get latest commit hash."
     ret = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True)
     assert ret.returncode == 0, "Failed to get latest commit hash."
-    commit_hash = ret.stdout.decode("utf-8").strip()
-    return commit_hash
+    return ret.stdout.decode("utf-8").strip()
 
 
 def download_wheels(
@@ -131,8 +130,8 @@ def download_py_packages(
 
     branch = branch.split("_")[1]  # release_x.y.z
     dir_URL = PREFIX + branch + "/"
-    src_filename_prefix = "xgboost-" + args.release + "%2B" + commit_hash + "-py3-none-"
-    target_filename_prefix = "xgboost-" + args.release + "-py3-none-"
+    src_filename_prefix = f"xgboost-{args.release}%2B{commit_hash}-py3-none-"
+    target_filename_prefix = f"xgboost-{args.release}-py3-none-"
 
     if not os.path.exists(DIST):
         os.mkdir(DIST)
@@ -284,11 +283,11 @@ def main(args: argparse.Namespace) -> None:
         rc, rc_ver = rel.pre
         assert rc == "rc"
 
-    release = str(major) + "." + str(minor) + "." + str(patch)
+    release = f"{str(major)}.{str(minor)}.{str(patch)}"
     if args.branch is not None:
         branch = args.branch
     else:
-        branch = "release_" + str(major) + "." + str(minor) + ".0"
+        branch = f"release_{str(major)}.{str(minor)}.0"
 
     git.clean("-xdf")
     git.checkout(branch)

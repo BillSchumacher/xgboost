@@ -57,7 +57,7 @@ def test_thread_safty():
     n_threads = multiprocessing.cpu_count()
     futures = []
     with ThreadPoolExecutor(max_workers=n_threads) as executor:
-        for i in range(256):
+        for _ in range(256):
             f = executor.submit(test_nested_config)
             futures.append(f)
 

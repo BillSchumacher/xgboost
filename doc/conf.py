@@ -43,11 +43,7 @@ def run_doxygen():
         if not os.path.exists(DOX_DIR):
             os.mkdir(DOX_DIR)
         os.chdir(os.path.join(PROJECT_ROOT, DOX_DIR))
-        print(
-            "Build doxygen at {}".format(
-                os.path.join(PROJECT_ROOT, DOX_DIR, "doc_doxygen")
-            )
-        )
+        print(f'Build doxygen at {os.path.join(PROJECT_ROOT, DOX_DIR, "doc_doxygen")}')
         subprocess.check_call(["cmake", "..", "-DBUILD_C_DOC=ON", "-GNinja"])
         subprocess.check_call(["ninja", "doc_doxygen"])
 
@@ -56,7 +52,7 @@ def run_doxygen():
         print(f"Copy directory {src} -> {dest}")
         shutil.copytree(src, dest)
     except OSError as e:
-        sys.stderr.write("doxygen execution failed: %s" % e)
+        sys.stderr.write(f"doxygen execution failed: {e}")
     finally:
         os.chdir(curdir)
 
@@ -88,7 +84,7 @@ if not git_branch:
     git_branch = [x for x in git_branch if "HEAD" not in x]
 else:
     git_branch = [git_branch]
-print("git_branch = {}".format(git_branch[0]))
+print(f"git_branch = {git_branch[0]}")
 
 try:
     filename, _ = urllib.request.urlretrieve(
@@ -120,8 +116,8 @@ sys.path.insert(0, CURR_PATH)
 
 # General information about the project.
 project = "xgboost"
-author = "%s developers" % project
-copyright = "2022, %s" % author
+author = f"{project} developers"
+copyright = f"2022, {author}"
 github_doc_root = "https://github.com/dmlc/xgboost/tree/master/doc/"
 
 os.environ["XGBOOST_BUILD_DOC"] = "1"
@@ -211,10 +207,7 @@ autoclass_content = "both"
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 exclude_patterns = ["_build"]
-html_extra_path = []
-if is_readthedocs_build():
-    html_extra_path = [TMP_DIR]
-
+html_extra_path = [TMP_DIR] if is_readthedocs_build() else []
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
 # default_role = None
@@ -262,7 +255,7 @@ html_sidebars = {"**": ["logo-text.html", "globaltoc.html", "searchbox.html"]}
 html_static_path = ["_static"]
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = project + "doc"
+htmlhelp_basename = f"{project}doc"
 
 # -- Options for LaTeX output ---------------------------------------------
 latex_elements = {}
@@ -270,9 +263,7 @@ latex_elements = {}
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
-latex_documents = [
-    (master_doc, "%s.tex" % project, project, author, "manual"),
-]
+latex_documents = [(master_doc, f"{project}.tex", project, author, "manual")]
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3.8", None),

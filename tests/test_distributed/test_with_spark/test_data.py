@@ -43,7 +43,7 @@ def run_dmatrix_ctor(is_feature_cols: bool, is_qdm: bool, on_gpu: bool) -> None:
     n_batches = 10
     feature_types = ["float"] * n_features
 
-    for i in range(n_batches):
+    for _ in range(n_batches):
         X = rng.normal(loc=0, size=256).reshape(n_samples_per_batch, n_features)
         y = rng.normal(loc=0, size=n_samples_per_batch)
         m = rng.normal(loc=0, size=n_samples_per_batch)

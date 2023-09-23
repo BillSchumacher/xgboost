@@ -34,10 +34,7 @@ eval[test] = {data_path}
     PROJECT_ROOT = tm.project_root(__file__)
 
     def get_exe(self):
-        if platform.system() == 'Windows':
-            exe = 'xgboost.exe'
-        else:
-            exe = 'xgboost'
+        exe = 'xgboost.exe' if platform.system() == 'Windows' else 'xgboost'
         exe = os.path.join(self.PROJECT_ROOT, exe)
         assert os.path.exists(exe)
         return exe

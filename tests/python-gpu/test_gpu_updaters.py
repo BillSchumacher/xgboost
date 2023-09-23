@@ -295,7 +295,7 @@ class TestGPUUpdaters:
         import pandas as pd
 
         data = pd.DataFrame(np.random.rand(1024, 8))
-        data.columns = "x" + data.columns.astype(str)
+        data.columns = f"x{data.columns.astype(str)}"
         features = data.columns
         data["y"] = data.sum(axis=1) < 4
         dtrain = xgb.DMatrix(data[features], label=data["y"])

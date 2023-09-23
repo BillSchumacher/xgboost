@@ -47,7 +47,7 @@ _matrix_meta = {"base_margin", "label"}
 def _warn_unused_missing(data: DataType, missing: Optional[FloatCompatible]) -> None:
     if (missing is not None) and (not np.isnan(missing)):
         warnings.warn(
-            "`missing` is not used for current input data type:" + str(type(data)),
+            f"`missing` is not used for current input data type:{str(type(data))}",
             UserWarning,
         )
 
@@ -72,8 +72,7 @@ def _array_interface(data: np.ndarray) -> bytes:
     interface = data.__array_interface__
     if "mask" in interface:
         interface["mask"] = interface["mask"].__array_interface__
-    interface_str = bytes(json.dumps(interface), "utf-8")
-    return interface_str
+    return bytes(json.dumps(interface), "utf-8")
 
 
 def transform_scipy_sparse(data: DataType, is_csr: bool) -> DataType:
@@ -118,7 +117,7 @@ def _from_scipy_csr(
             _array_interface(data.indices),
             _array_interface(data.data),
             c_bst_ulong(data.shape[1]),
-            make_jcargs(missing=float(missing), nthread=int(nthread)),
+            make_jcargs(missing=float(missing), nthread=nthread),
             ctypes.byref(handle),
         )
     )
@@ -149,7 +148,7 @@ def _from_scipy_csc(
             _array_interface(data.indices),
             _array_interface(data.data),
             c_bst_ulong(data.shape[0]),
-            make_jcargs(missing=float(missing), nthread=int(nthread)),
+            make_jcargs(missing=float(missing), nthread=nthread),
             ctypes.byref(handle),
         )
     )
@@ -209,7 +208,7 @@ def _from_numpy_array(
             _array_interface(data),
             make_jcargs(
                 missing=float(missing),
-                nthread=int(nthread),
+                nthread=nthread,
                 data_split_mode=int(data_split_mode),
             ),
             ctypes.byref(handle),
@@ -415,13 +414,7 @@ def pandas_cat_null(data: DataFrame) -> DataFrame:
         elif is_nullable_dtype(dtype):
             nul_columns.append(col)
 
-    if cat_columns or nul_columns:
-        # Avoid transformation due to: PerformanceWarning: DataFrame is highly
-        # fragmented
-        transformed = data.copy(deep=False)
-    else:
-        transformed = data
-
+    transformed = data.copy(deep=False) if cat_columns or nul_columns else data
     def cat_codes(ser: pd.Series) -> pd.Series:
         if is_pd_cat_dtype(ser.dtype):
             return ser.cat.codes
@@ -602,12 +595,11 @@ def _transform_dt_df(
         return data, None, None
 
     data_types_names = tuple(lt.name for lt in data.ltypes)
-    bad_fields = [
+    if bad_fields := [
         data.names[i]
         for i, type_name in enumerate(data_types_names)
         if type_name not in _dt_type_mapper
-    ]
-    if bad_fields:
+    ]:
         msg = """DataFrame.types for data must be int, float or bool.
                 Did not expect the data types in fields """
         raise ValueError(msg + ", ".join(bad_fields))
@@ -810,11 +802,7 @@ def _transform_cudf_df(
     except ImportError:
         from cudf.utils.dtypes import is_categorical_dtype
 
-    if _is_cudf_ser(data):
-        dtypes = [data.dtype]
-    else:
-        dtypes = data.dtypes
-
+    dtypes = [data.dtype] if _is_cudf_ser(data) else data.dtypes
     if not all(
         dtype.name in _pandas_dtype_mapper
         or (is_categorical_dtype(dtype) and enable_categorical)
@@ -1128,7 +1116,7 @@ def dispatch_data_backend(
             converted, missing, threads, feature_names, feature_types
         )
 
-    raise TypeError("Not supported type for data." + str(type(data)))
+    raise TypeError(f"Not supported type for data.{str(type(data))}")
 
 
 def _validate_meta_shape(data: DataType, name: str) -> None:
@@ -1139,8 +1127,10 @@ def _validate_meta_shape(data: DataType, name: str) -> None:
                 raise ValueError(msg)
             return
 
-        if len(data.shape) > 2 or (
-            len(data.shape) == 2 and (data.shape[1] != 0 and data.shape[1] != 1)
+        if (
+            len(data.shape) > 2
+            or len(data.shape) == 2
+            and data.shape[1] not in [0, 1]
         ):
             raise ValueError(f"Invalid shape: {data.shape} for {name}")
 
@@ -1254,7 +1244,7 @@ def dispatch_meta_backend(
         array = np.asarray(data)
         _meta_from_numpy(array, name, dtype, handle)
         return
-    raise TypeError("Unsupported type for " + name, str(type(data)))
+    raise TypeError(f"Unsupported type for {name}", str(type(data)))
 
 
 class SingleBatchInternalIter(DataIter):  # pylint: disable=R0902
@@ -1317,7 +1307,9 @@ def _proxy_transform(
         )
         arr, _ = _ensure_np_dtype(arr, arr.dtype)
         return arr, None, feature_names, feature_types
-    raise TypeError("Value type is not supported for data iterator:" + str(type(data)))
+    raise TypeError(
+        f"Value type is not supported for data iterator:{str(type(data))}"
+    )
 
 
 def dispatch_proxy_set_data(
@@ -1346,7 +1338,9 @@ def dispatch_proxy_set_data(
         proxy._set_data_from_cuda_interface(data)  # pylint: disable=W0212
         return
 
-    err = TypeError("Value type is not supported for data iterator:" + str(type(data)))
+    err = TypeError(
+        f"Value type is not supported for data iterator:{str(type(data))}"
+    )
 
     if not allow_host:
         raise err

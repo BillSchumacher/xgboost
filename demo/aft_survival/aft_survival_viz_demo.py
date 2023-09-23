@@ -93,7 +93,7 @@ class PlotIntermediateModel(xgb.callback.TrainingCallback):
         plt.plot(
             grid_pts, y_pred_grid_pts, "r-", label="XGBoost AFT model", linewidth=4
         )
-        plt.title("Iteration {}".format(epoch), x=0.5, y=0.8)
+        plt.title(f"Iteration {epoch}", x=0.5, y=0.8)
         plt.xlim((0.8, 5.2))
         plt.ylim((1 if np.min(y_pred) < 6 else 6, 200))
         plt.yscale("log")

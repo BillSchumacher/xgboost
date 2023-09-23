@@ -17,7 +17,7 @@ pytestmark = tm.timeout(30)
 
 def build_dataset():
     N = 10
-    x = np.linspace(0, N * N, N * N)
+    x = np.linspace(0, N**2, N**2)
     x = x.reshape((N, N))
     y = np.linspace(0, N, N)
     return x, y
@@ -118,7 +118,7 @@ class TestPickling:
         args = self.args_template.copy()
         root = tm.project_root(__file__)
         path = os.path.join(root, "tests", "python-gpu", "load_pickle.py")
-        args.append(path + "::TestLoadPickle::test_context_is_removed")
+        args.append(f"{path}::TestLoadPickle::test_context_is_removed")
 
         cuda_environment = {"CUDA_VISIBLE_DEVICES": "-1"}
         env = os.environ.copy()

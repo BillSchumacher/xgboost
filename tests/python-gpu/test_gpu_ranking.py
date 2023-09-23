@@ -25,18 +25,17 @@ def comp_training_with_rank_objective(
     # specify validations set to watch performance
     watchlist = [(dtest, "eval"), (dtrain, "train")]
 
-    params = {
-        "booster": "gbtree",
-        "tree_method": "gpu_hist",
-        "gpu_id": 0,
-    }
-
     num_trees = 100
     check_metric_improvement_rounds = 10
 
     evals_result: Dict[str, Dict] = {}
-    params["objective"] = rank_objective
-    params["eval_metric"] = metric_name
+    params = {
+        "booster": "gbtree",
+        "tree_method": "gpu_hist",
+        "gpu_id": 0,
+        "objective": rank_objective,
+        "eval_metric": metric_name,
+    }
     bst = xgboost.train(
         params,
         dtrain,
@@ -53,9 +52,9 @@ def comp_training_with_rank_objective(
         "booster": "gbtree",
         "tree_method": "hist",
         "gpu_id": -1,
+        "objective": rank_objective,
+        "eval_metric": metric_name,
     }
-    cpu_params["objective"] = rank_objective
-    cpu_params["eval_metric"] = metric_name
     bstc = xgboost.train(
         cpu_params,
         dtrain,

@@ -77,8 +77,7 @@ def get_rank() -> int:
     rank : int
         Rank of current process.
     """
-    ret = _LIB.XGCommunicatorGetRank()
-    return ret
+    return _LIB.XGCommunicatorGetRank()
 
 
 def get_world_size() -> int:
@@ -89,14 +88,12 @@ def get_world_size() -> int:
     n : int
         Total number of process.
     """
-    ret = _LIB.XGCommunicatorGetWorldSize()
-    return ret
+    return _LIB.XGCommunicatorGetWorldSize()
 
 
 def is_distributed() -> int:
     """If the collective communicator is distributed."""
-    is_dist = _LIB.XGCommunicatorIsDistributed()
-    return is_dist
+    return _LIB.XGCommunicatorIsDistributed()
 
 
 def communicator_print(msg: Any) -> None:

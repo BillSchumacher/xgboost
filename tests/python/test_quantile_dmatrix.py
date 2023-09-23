@@ -45,10 +45,7 @@ class TestQuantileDMatrix:
         assert Xy.num_col() == n_features
 
         n_samples = 64
-        data = []
-        for f in range(n_samples):
-            row = [f] * n_features
-            data.append(row)
+        data = [[f] * n_features for f in range(n_samples)]
         assert np.array(data).shape == (n_samples, n_features)
         Xy = xgb.QuantileDMatrix(data, max_bin=256)
         assert Xy.num_row() == n_samples

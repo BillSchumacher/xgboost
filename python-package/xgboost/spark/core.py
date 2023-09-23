@@ -245,7 +245,7 @@ class _SparkXGBParams(
     def set_device(self, value: str) -> "_SparkXGBParams":
         """Set device, optional value: cpu, cuda, gpu"""
         _check_distributed_params({"device": value})
-        assert value in ("cpu", "cuda", "gpu")
+        assert value in {"cpu", "cuda", "gpu"}
         self.set(self.device, value)
         return self
 
@@ -278,7 +278,6 @@ class _SparkXGBParams(
         self, gen_xgb_sklearn_estimator_param: bool = False
     ) -> Dict[str, Any]:
         """Generate the xgboost parameters which will be passed into xgboost library"""
-        xgb_params = {}
         non_xgb_params = (
             set(_pyspark_specific_params)
             | self._get_fit_params_default().keys()
@@ -286,10 +285,11 @@ class _SparkXGBParams(
         )
         if not gen_xgb_sklearn_estimator_param:
             non_xgb_params |= set(_non_booster_params)
-        for param in self.extractParamMap():
-            if param.name not in non_xgb_params:
-                xgb_params[param.name] = self.getOrDefault(param)
-
+        xgb_params = {
+            param.name: self.getOrDefault(param)
+            for param in self.extractParamMap()
+            if param.name not in non_xgb_params
+        }
         arbitrary_params_dict = self.getOrDefault(
             self.getParam("arbitrary_params_dict")
         )
@@ -300,10 +300,9 @@ class _SparkXGBParams(
     @classmethod
     def _get_fit_params_default(cls) -> Dict[str, Any]:
         """Get the xgboost.XGBModel().fit() parameters"""
-        fit_params = _get_default_params_from_func(
+        return _get_default_params_from_func(
             cls._xgb_cls().fit, _unsupported_fit_params
         )
-        return fit_params
 
     def _set_fit_params_default(self) -> None:
         """Get the xgboost.XGBModel().fit() parameters and set them to spark parameters"""
@@ -313,19 +312,18 @@ class _SparkXGBParams(
     def _gen_fit_params_dict(self) -> Dict[str, Any]:
         """Generate the fit parameters which will be passed into fit function"""
         fit_params_keys = self._get_fit_params_default().keys()
-        fit_params = {}
-        for param in self.extractParamMap():
-            if param.name in fit_params_keys:
-                fit_params[param.name] = self.getOrDefault(param)
-        return fit_params
+        return {
+            param.name: self.getOrDefault(param)
+            for param in self.extractParamMap()
+            if param.name in fit_params_keys
+        }
 
     @classmethod
     def _get_predict_params_default(cls) -> Dict[str, Any]:
         """Get the parameters from xgboost.XGBModel().predict()"""
-        predict_params = _get_default_params_from_func(
+        return _get_default_params_from_func(
             cls._xgb_cls().predict, _unsupported_predict_params
         )
-        return predict_params
 
     def _set_predict_params_default(self) -> None:
         """Get the parameters from xgboost.XGBModel().predict() and
@@ -336,11 +334,11 @@ class _SparkXGBParams(
     def _gen_predict_params_dict(self) -> Dict[str, Any]:
         """Generate predict parameters which will be passed into xgboost.XGBModel().predict()"""
         predict_params_keys = self._get_predict_params_default().keys()
-        predict_params = {}
-        for param in self.extractParamMap():
-            if param.name in predict_params_keys:
-                predict_params[param.name] = self.getOrDefault(param)
-        return predict_params
+        return {
+            param.name: self.getOrDefault(param)
+            for param in self.extractParamMap()
+            if param.name in predict_params_keys
+        }
 
     def _validate_params(self) -> None:
         # pylint: disable=too-many-branches
@@ -428,9 +426,7 @@ class _SparkXGBParams(
                 .get("spark.task.resource.gpu.amount")
             )
 
-            is_local = _is_local(_get_spark_session().sparkContext)
-
-            if is_local:
+            if is_local := _is_local(_get_spark_session().sparkContext):
                 # checking spark local mode.
                 if gpu_per_task is not None:
                     raise RuntimeError(
@@ -448,25 +444,23 @@ class _SparkXGBParams(
                     self.getOrDefault(self.num_workers),
                 )
             else:
-                # checking spark non-local mode.
-                if gpu_per_task is not None:
-                    if float(gpu_per_task) < 1.0:
-                        raise ValueError(
-                            "XGBoost doesn't support GPU fractional configurations. "
-                            "Please set `spark.task.resource.gpu.amount=spark.executor"
-                            ".resource.gpu.amount`"
-                        )
-
-                    if float(gpu_per_task) > 1.0:
-                        get_logger(self.__class__.__name__).warning(
-                            "%s GPUs for each Spark task is configured, but each "
-                            "XGBoost training task uses only 1 GPU.",
-                            gpu_per_task,
-                        )
-                else:
+                if gpu_per_task is None:
                     raise ValueError(
                         "The `spark.task.resource.gpu.amount` is required for training"
                         " on GPU."
+                    )
+                if float(gpu_per_task) < 1.0:
+                    raise ValueError(
+                        "XGBoost doesn't support GPU fractional configurations. "
+                        "Please set `spark.task.resource.gpu.amount=spark.executor"
+                        ".resource.gpu.amount`"
+                    )
+
+                if float(gpu_per_task) > 1.0:
+                    get_logger(self.__class__.__name__).warning(
+                        "%s GPUs for each Spark task is configured, but each "
+                        "XGBoost training task uses only 1 GPU.",
+                        gpu_per_task,
                     )
 
 
@@ -592,7 +586,7 @@ class _SparkXGBEstimator(Estimator, _SparkXGBParams, MLReadable, MLWritable):
             arbitrary_params_dict={},
         )
 
-    def setParams(self, **kwargs: Any) -> None:  # pylint: disable=invalid-name
+    def setParams(self, **kwargs: Any) -> None:    # pylint: disable=invalid-name
         """
         Set params for the estimator.
         """
@@ -615,11 +609,9 @@ class _SparkXGBEstimator(Estimator, _SparkXGBParams, MLReadable, MLWritable):
                     self.featuresCol.name
                 ] and isinstance(v, list):
                     real_k = self.features_cols.name
-                    k = real_k
                 else:
                     real_k = _pyspark_param_alias_map[k]
-                    k = real_k
-
+                k = real_k
             if self.hasParam(k):
                 if k == "features_col" and isinstance(v, list):
                     self._set(**{"features_cols": v})
@@ -685,12 +677,10 @@ class _SparkXGBEstimator(Estimator, _SparkXGBParams, MLReadable, MLWritable):
         start = query_plan.index("== Optimized Logical Plan ==")
         start += len("== Optimized Logical Plan ==") + 1
         num_workers = self.getOrDefault(self.num_workers)
-        if (
+        return (
             query_plan[start : start + len("Repartition")] == "Repartition"
             and num_workers == num_partitions
-        ):
-            return True
-        return False
+        )
 
     def _repartition_needed(self, dataset: DataFrame) -> bool:
         """
@@ -767,24 +757,24 @@ class _SparkXGBEstimator(Estimator, _SparkXGBParams, MLReadable, MLWritable):
         if enable_sparse_data_optim:
             features_col_name = self.getOrDefault(self.featuresCol)
             features_col_datatype = dataset.schema[features_col_name].dataType
-            if not isinstance(features_col_datatype, VectorUDT):
+            if isinstance(features_col_datatype, VectorUDT):
+                select_cols.extend(_get_unwrapped_vec_cols(col(features_col_name)))
+            else:
                 raise ValueError(
                     "If enable_sparse_data_optim is True, the feature column values must be "
                     "`pyspark.ml.linalg.Vector` type."
                 )
-            select_cols.extend(_get_unwrapped_vec_cols(col(features_col_name)))
+        elif self.getOrDefault(self.features_cols):
+            features_cols_names = self.getOrDefault(self.features_cols)
+            features_cols = _validate_and_convert_feature_col_as_float_col_list(
+                dataset, features_cols_names
+            )
+            select_cols.extend(features_cols)
         else:
-            if self.getOrDefault(self.features_cols):
-                features_cols_names = self.getOrDefault(self.features_cols)
-                features_cols = _validate_and_convert_feature_col_as_float_col_list(
-                    dataset, features_cols_names
-                )
-                select_cols.extend(features_cols)
-            else:
-                features_array_col = _validate_and_convert_feature_col_as_array_col(
-                    dataset, self.getOrDefault(self.featuresCol)
-                )
-                select_cols.append(features_array_col)
+            features_array_col = _validate_and_convert_feature_col_as_array_col(
+                dataset, self.getOrDefault(self.featuresCol)
+            )
+            select_cols.append(features_array_col)
 
         if self.isDefined(self.weightCol) and self.getOrDefault(self.weightCol) != "":
             select_cols.append(
@@ -914,8 +904,8 @@ class _SparkXGBEstimator(Estimator, _SparkXGBParams, MLReadable, MLWritable):
         num_workers = self.getOrDefault(self.num_workers)
 
         def _train_booster(
-            pandas_df_iter: Iterator[pd.DataFrame],
-        ) -> Iterator[pd.DataFrame]:
+                pandas_df_iter: Iterator[pd.DataFrame],
+            ) -> Iterator[pd.DataFrame]:
             """Takes in an RDD partition and outputs a booster for that partition after
             going through the Rabit Ring protocol
 
@@ -931,7 +921,7 @@ class _SparkXGBEstimator(Estimator, _SparkXGBParams, MLReadable, MLWritable):
                 dev_ordinal = (
                     context.partitionId() if is_local else _get_gpu_id(context)
                 )
-                booster_params["device"] = "cuda:" + str(dev_ordinal)
+                booster_params["device"] = f"cuda:{str(dev_ordinal)}"
                 # If cuDF is not installed, then using DMatrix instead of QDM,
                 # because without cuDF, DMatrix performs better than QDM.
                 # Note: Checking `is_cudf_available` in spark worker side because
@@ -956,7 +946,7 @@ class _SparkXGBEstimator(Estimator, _SparkXGBParams, MLReadable, MLWritable):
             }
 
             messages = context.allGather(message=json.dumps(worker_message))
-            if len(set(json.loads(x)["use_qdm"] for x in messages)) != 1:
+            if len({json.loads(x)["use_qdm"] for x in messages}) != 1:
                 raise RuntimeError("The workers' cudf environments are in-consistent ")
 
             _rabit_args = json.loads(messages[0])["rabit_msg"]
@@ -1127,14 +1117,14 @@ class _SparkXGBModel(Model, _SparkXGBParams, MLReadable, MLWritable):
 
     def _get_pred_contrib_col_name(self) -> Optional[str]:
         """Return the pred_contrib_col col name"""
-        pred_contrib_col_name = None
-        if (
-            self.isDefined(self.pred_contrib_col)
-            and self.getOrDefault(self.pred_contrib_col) != ""
-        ):
-            pred_contrib_col_name = self.getOrDefault(self.pred_contrib_col)
-
-        return pred_contrib_col_name
+        return (
+            self.getOrDefault(self.pred_contrib_col)
+            if (
+                self.isDefined(self.pred_contrib_col)
+                and self.getOrDefault(self.pred_contrib_col) != ""
+            )
+            else None
+        )
 
     def _out_schema(self) -> Tuple[bool, str]:
         """Return the bool to indicate if it's a single prediction, true is single prediction,
@@ -1278,7 +1268,7 @@ class _SparkXGBModel(Model, _SparkXGBParams, MLReadable, MLWritable):
                     dev_ordinal = _get_gpu_id(context)
 
                 if dev_ordinal >= 0:
-                    device = "cuda:" + str(dev_ordinal)
+                    device = f"cuda:{str(dev_ordinal)}"
                     get_logger("XGBoost-PySpark").info(
                         "Do the inference with device: %s", device
                     )
@@ -1403,21 +1393,18 @@ class _ClassificationModel(  # pylint: disable=abstract-method
         pred_struct_col = "_prediction_struct"
         dataset = dataset.withColumn(pred_struct_col, pred_col)
 
-        raw_prediction_col_name = self.getOrDefault(self.rawPredictionCol)
-        if raw_prediction_col_name:
+        if raw_prediction_col_name := self.getOrDefault(self.rawPredictionCol):
             dataset = dataset.withColumn(
                 raw_prediction_col_name,
                 array_to_vector(getattr(col(pred_struct_col), pred.raw_prediction)),
             )
 
-        prediction_col_name = self.getOrDefault(self.predictionCol)
-        if prediction_col_name:
+        if prediction_col_name := self.getOrDefault(self.predictionCol):
             dataset = dataset.withColumn(
                 prediction_col_name, getattr(col(pred_struct_col), pred.prediction)
             )
 
-        probability_col_name = self.getOrDefault(self.probabilityCol)
-        if probability_col_name:
+        if probability_col_name := self.getOrDefault(self.probabilityCol):
             dataset = dataset.withColumn(
                 probability_col_name,
                 array_to_vector(getattr(col(pred_struct_col), pred.probability)),
@@ -1448,11 +1435,11 @@ class _SparkXGBSharedReadWrite:
         """
         instance._validate_params()
         skipParams = ["callbacks", "xgb_model"]
-        jsonParams = {}
-        for p, v in instance._paramMap.items():  # pylint: disable=protected-access
-            if p.name not in skipParams:
-                jsonParams[p.name] = v
-
+        jsonParams = {
+            p.name: v
+            for p, v in instance._paramMap.items()
+            if p.name not in skipParams
+        }
         extraMetadata = extraMetadata or {}
         callbacks = instance.getOrDefault("callbacks")
         if callbacks is not None:

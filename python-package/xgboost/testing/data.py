@@ -304,9 +304,9 @@ def get_mq2008(
 ]:
     """Fetch the mq2008 dataset."""
     datasets = pytest.importorskip("sklearn.datasets")
-    src = "https://s3-us-west-2.amazonaws.com/xgboost-examples/MQ2008.zip"
     target = os.path.join(dpath, "MQ2008.zip")
     if not os.path.exists(target):
+        src = "https://s3-us-west-2.amazonaws.com/xgboost-examples/MQ2008.zip"
         request.urlretrieve(url=src, filename=target)
 
     with zipfile.ZipFile(target, "r") as f:
@@ -473,9 +473,7 @@ def init_rank_score(
     ltr = xgboost.XGBRanker(objective="rank:ndcg", tree_method="hist")
     ltr.fit(X_train, y_train, qid=qid_train)
 
-    # Use the original order of the data.
-    scores = ltr.predict(X)
-    return scores
+    return ltr.predict(X)
 
 
 def simulate_one_fold(
@@ -600,6 +598,4 @@ def sort_ltr_samples(
         # not necessary
         qid[beg:end] = qid[beg:end][sorted_idx]
 
-    data = X, clicks, y, qid
-
-    return data
+    return X, clicks, y, qid

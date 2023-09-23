@@ -31,8 +31,8 @@ def make_batches(
     rng = np.random.RandomState(1994)
     for i in range(n_batches):
         X, y = make_regression(n_samples_per_batch, n_features, random_state=rng)
-        X_path = os.path.join(tmpdir, "X-" + str(i) + ".npy")
-        y_path = os.path.join(tmpdir, "y-" + str(i) + ".npy")
+        X_path = os.path.join(tmpdir, f"X-{str(i)}.npy")
+        y_path = os.path.join(tmpdir, f"y-{str(i)}.npy")
         np.save(X_path, X)
         np.save(y_path, y)
         files.append((X_path, y_path))
@@ -86,16 +86,12 @@ def main(tmpdir: str) -> xgboost.Booster:
     missing = np.NaN
     Xy = xgboost.DMatrix(it, missing=missing, enable_categorical=False)
 
-    # ``approx`` is also supported, but less efficient due to sketching. GPU behaves
-    # differently than CPU tree methods as it uses a hybrid approach. See tutorial in
-    # doc for details.
-    booster = xgboost.train(
+    return xgboost.train(
         {"tree_method": "hist", "max_depth": 4},
         Xy,
         evals=[(Xy, "Train")],
         num_boost_round=10,
     )
-    return booster
 
 
 if __name__ == "__main__":

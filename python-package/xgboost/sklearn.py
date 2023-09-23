@@ -53,7 +53,7 @@ class XGBClassifierMixIn:  # pylint: disable=too-few-public-methods
         config = json.loads(booster.save_config())
         self.n_classes_ = int(config["learner"]["learner_model_param"]["num_class"])
         # binary classification is treated as regression in XGBoost.
-        self.n_classes_ = 2 if self.n_classes_ < 2 else self.n_classes_
+        self.n_classes_ = max(self.n_classes_, 2)
 
 
 class XGBRankerMixIn:  # pylint: disable=too-few-public-methods
@@ -162,11 +162,7 @@ def ltr_metric_decorator(func: Callable, n_jobs: Optional[int]) -> Metric:
             end = group_ptr[i]
             gy = y_true[begin:end]
             gp = y_score[begin:end]
-            if gy.size == 1:
-                # Maybe there's a better default? 1.0 because many ranking score
-                # functions have output in range [0, 1].
-                return 1.0
-            return func(gy, gp)
+            return 1.0 if gy.size == 1 else func(gy, gp)
 
         workers = n_jobs if n_jobs is not None else os.cpu_count()
         with ThreadPoolExecutor(max_workers=workers) as executor:
@@ -808,12 +804,11 @@ class XGBModel(XGBModelBase):
             "callbacks",
             "feature_types",
         }
-        filtered = {}
-        for k, v in params.items():
-            if k not in wrapper_specific and not callable(v):
-                filtered[k] = v
-
-        return filtered
+        return {
+            k: v
+            for k, v in params.items()
+            if k not in wrapper_specific and not callable(v)
+        }
 
     def get_num_boosting_rounds(self) -> int:
         """Gets the number of xgboost boosting rounds."""
@@ -828,9 +823,7 @@ class XGBModel(XGBModelBase):
         return self._estimator_type  # pylint: disable=no-member
 
     def save_model(self, fname: Union[str, os.PathLike]) -> None:
-        meta: Dict[str, Any] = {}
-        # For validation.
-        meta["_estimator_type"] = self._get_type()
+        meta: Dict[str, Any] = {"_estimator_type": self._get_type()}
         meta_str = json.dumps(meta)
         self.get_booster().set_attr(scikit_learn=meta_str)
         self.get_booster().save_model(fname)
@@ -876,11 +869,7 @@ class XGBModel(XGBModelBase):
         Optional[Sequence[TrainingCallback]],
     ]:
         """Configure parameters for :py:meth:`fit`."""
-        if isinstance(booster, XGBModel):
-            model: Optional[Union[Booster, str]] = booster.get_booster()
-        else:
-            model = booster
-
+        model = booster.get_booster() if isinstance(booster, XGBModel) else booster
         def _deprecated(parameter: str) -> None:
             warnings.warn(
                 f"`{parameter}` in `fit` method is deprecated for better compatibility "
@@ -919,7 +908,7 @@ class XGBModel(XGBModelBase):
                 else:
                     metric = _metric_decorator(eval_metric)
             else:
-                params.update({"eval_metric": eval_metric})
+                params["eval_metric"] = eval_metric
 
         # Configure early_stopping_rounds
         if early_stopping_rounds is not None:
@@ -1101,9 +1090,7 @@ class XGBModel(XGBModelBase):
             return self
 
     def _can_use_inplace_predict(self) -> bool:
-        if self.booster != "gblinear":
-            return True
-        return False
+        return self.booster != "gblinear"
 
     def _get_iteration_range(
         self, iteration_range: Optional[Tuple[int, int]]
@@ -1323,9 +1310,7 @@ class XGBModel(XGBModelBase):
         all_features = [score.get(f, 0.0) for f in feature_names]
         all_features_arr = np.array(all_features, dtype=np.float32)
         total = all_features_arr.sum()
-        if total == 0:
-            return all_features_arr
-        return all_features_arr / total
+        return all_features_arr if total == 0 else all_features_arr / total
 
     @property
     def coef_(self) -> np.ndarray:
@@ -1385,16 +1370,13 @@ PredtT = TypeVar("PredtT", bound=np.ndarray)
 
 def _cls_predict_proba(n_classes: int, prediction: PredtT, vstack: Callable) -> PredtT:
     assert len(prediction.shape) <= 2
-    if len(prediction.shape) == 2 and prediction.shape[1] == n_classes:
-        # multi-class
-        return prediction
-    if (
-        len(prediction.shape) == 2
-        and n_classes == 2
-        and prediction.shape[1] >= n_classes
-    ):
-        # multi-label
-        return prediction
+    if len(prediction.shape) == 2:
+        if prediction.shape[1] == n_classes:
+            # multi-class
+            return prediction
+        if n_classes == 2 and prediction.shape[1] >= n_classes:
+            # multi-label
+            return prediction
     # binary logistic function
     classone_probs = prediction
     classzero_probs = 1.0 - classone_probs
@@ -1623,8 +1605,7 @@ class XGBClassifier(XGBModel, XGBClassifierMixIn, XGBClassifierBase):
                 iteration_range=iteration_range,
                 output_margin=True,
             )
-            class_prob = softmax(raw_predt, axis=1)
-            return class_prob
+            return softmax(raw_predt, axis=1)
         class_probs = super().predict(
             X=X,
             validate_features=validate_features,

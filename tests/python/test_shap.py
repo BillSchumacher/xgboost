@@ -117,23 +117,22 @@ class TestSHAP:
         def exp_value_rec(tree, z, x, i=0):
             if tree[i]["value"] is not None:
                 return tree[i]["value"]
-            else:
-                ind = tree[i]["feature_index"]
-                if z[ind] == 1:
+            ind = tree[i]["feature_index"]
+            if z[ind] == 1:
                     # 1e-6 for numeric error from parsing text dump.
-                    if x[ind] + 1e-6 <= tree[i]["threshold"]:
-                        return exp_value_rec(tree, z, x, tree[i]["yes_ind"])
-                    else:
-                        return exp_value_rec(tree, z, x, tree[i]["no_ind"])
-                else:
-                    r_yes = tree[tree[i]["yes_ind"]]["cover"] / tree[i]["cover"]
-                    out = exp_value_rec(tree, z, x, tree[i]["yes_ind"])
-                    val = out * r_yes
+                return (
+                    exp_value_rec(tree, z, x, tree[i]["yes_ind"])
+                    if x[ind] + 1e-6 <= tree[i]["threshold"]
+                    else exp_value_rec(tree, z, x, tree[i]["no_ind"])
+                )
+            r_yes = tree[tree[i]["yes_ind"]]["cover"] / tree[i]["cover"]
+            out = exp_value_rec(tree, z, x, tree[i]["yes_ind"])
+            val = out * r_yes
 
-                    r_no = tree[tree[i]["no_ind"]]["cover"] / tree[i]["cover"]
-                    out = exp_value_rec(tree, z, x, tree[i]["no_ind"])
-                    val += out * r_no
-                    return val
+            r_no = tree[tree[i]["no_ind"]]["cover"] / tree[i]["cover"]
+            out = exp_value_rec(tree, z, x, tree[i]["no_ind"])
+            val += out * r_no
+            return val
 
         def exp_value(trees, z, x):
             "E[f(z)|Z_s = X_s]"
@@ -147,9 +146,9 @@ class TestSHAP:
         def shap_value(trees, x, i, cond=None, cond_value=None):
             M = len(x)
             z = np.zeros(M)
-            other_inds = list(set(range(M)) - set([i]))
+            other_inds = list(set(range(M)) - {i})
             if cond is not None:
-                other_inds = list(set(other_inds) - set([cond]))
+                other_inds = list(set(other_inds) - {cond})
                 z[cond] = cond_value
                 M -= 1
             total = 0.0
@@ -185,7 +184,7 @@ class TestSHAP:
         def interaction_value(trees, x, i, j):
             M = len(x)
             z = np.zeros(M)
-            other_inds = list(set(range(M)) - set([i, j]))
+            other_inds = list(set(range(M)) - {i, j})
 
             total = 0.0
             for subset in all_subsets(other_inds):

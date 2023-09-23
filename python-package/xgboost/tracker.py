@@ -140,10 +140,7 @@ class WorkerEntry:
         self, wait_conn: Dict[int, "WorkerEntry"], badset: Set[int]
     ) -> List[int]:
         while True:
-            conset = []
-            for r in badset:
-                if r in wait_conn:
-                    conset.append(r)
+            conset = [r for r in badset if r in wait_conn]
             self.sock.sendint(len(conset))
             self.sock.sendint(len(badset) - len(conset))
             for r in conset:
@@ -216,7 +213,7 @@ class RabitTracker:
 
     @staticmethod
     def _get_neighbor(rank: int, n_workers: int) -> List[int]:
-        rank = rank + 1
+        rank += 1
         ret = []
         if rank > 1:
             ret.append(rank // 2 - 1)
@@ -253,10 +250,8 @@ class RabitTracker:
         if not cset:
             return [rank]
         rlst = [rank]
-        cnt = 0
-        for v in cset:
+        for cnt, v in enumerate(cset, start=1):
             vlst = self.find_share_ring(tree_map, parent_map, v)
-            cnt += 1
             if cnt == len(cset):
                 vlst.reverse()
             rlst += vlst
@@ -290,18 +285,15 @@ class RabitTracker:
             k = ring_map[k][1]
             rmap[k] = i + 1
 
-        ring_map_: _RingMap = {}
         tree_map_: _TreeMap = {}
         parent_map_: Dict[int, int] = {}
-        for k, v in ring_map.items():
-            ring_map_[rmap[k]] = (rmap[v[0]], rmap[v[1]])
+        ring_map_: _RingMap = {
+            rmap[k]: (rmap[v[0]], rmap[v[1]]) for k, v in ring_map.items()
+        }
         for k, tree_nodes in tree_map.items():
             tree_map_[rmap[k]] = [rmap[x] for x in tree_nodes]
         for k, parent in parent_map.items():
-            if k != 0:
-                parent_map_[rmap[k]] = rmap[parent]
-            else:
-                parent_map_[rmap[k]] = -1
+            parent_map_[rmap[k]] = rmap[parent] if k != 0 else -1
         return tree_map_, parent_map_, ring_map_
 
     def _sort_pending(self, pending: List[WorkerEntry]) -> List[WorkerEntry]:

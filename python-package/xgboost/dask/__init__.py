@@ -201,8 +201,7 @@ def _start_tracker(
     addr_from_user: Optional[Tuple[str, int]],
 ) -> Dict[str, Union[int, str]]:
     """Start Rabit tracker, recurse to try different addresses."""
-    env = _try_start_tracker(n_workers, [addr_from_user, addr_from_dask])
-    return env
+    return _try_start_tracker(n_workers, [addr_from_user, addr_from_dask])
 
 
 def _assert_dask_support() -> None:
@@ -214,8 +213,10 @@ def _assert_dask_support() -> None:
         ) from e
 
     if platform.system() == "Windows":
-        msg = "Windows is not officially supported for dask/xgboost,"
-        msg += " contribution are welcomed."
+        msg = (
+            "Windows is not officially supported for dask/xgboost,"
+            + " contribution are welcomed."
+        )
         LOGGER.warning(msg)
 
 
@@ -233,7 +234,7 @@ class CommunicatorContext(collective.CommunicatorContext):
         # not the same as task ID is string and "10" is sorted before "2") with dask
         # worker ID. This outsources the rank assignment to dask and prevents
         # non-deterministic issue.
-        self.args["DMLC_TASK_ID"] = f"[xgboost.dask-{wid}]:" + str(worker.address)
+        self.args["DMLC_TASK_ID"] = f"[xgboost.dask-{wid}]:{str(worker.address)}"
 
 
 def dconcat(value: Sequence[_T]) -> _T:
@@ -250,8 +251,7 @@ def _xgb_get_client(client: Optional["distributed.Client"]) -> "distributed.Clie
         raise TypeError(
             _expect([type(distributed.get_client()), type(None)], type(client))
         )
-    ret = distributed.get_client() if client is None else client
-    return ret
+    return distributed.get_client() if client is None else client
 
 
 # From the implementation point of view, DaskDMatrix complicates a lots of
@@ -557,10 +557,7 @@ def _get_worker_parts(list_of_parts: _DataParts) -> Dict[str, List[Any]]:
     result: Dict[str, List[Any]] = {}
 
     def append(i: int, name: str) -> None:
-        if name in list_of_parts[i]:
-            part = list_of_parts[i][name]
-        else:
-            part = None
+        part = list_of_parts[i][name] if name in list_of_parts[i] else None
         if part is not None:
             if name not in result:
                 result[name] = []
@@ -618,9 +615,7 @@ class DaskPartitionIter(DataIter):  # pylint: disable=R0902
         super().__init__()
 
     def _get(self, attr: str) -> Optional[Any]:
-        if getattr(self, attr) is not None:
-            return getattr(self, attr)[self._iter]
-        return None
+        return None if getattr(self, attr) is None else getattr(self, attr)[self._iter]
 
     def data(self) -> Any:
         """Utility function for obtaining current batch of data."""
@@ -737,7 +732,7 @@ def _create_quantile_dmatrix(
         msg = f"worker {worker.address} has an empty DMatrix."
         LOGGER.warning(msg)
 
-        d = QuantileDMatrix(
+        return QuantileDMatrix(
             numpy.empty((0, 0)),
             feature_names=feature_names,
             feature_types=feature_types,
@@ -745,8 +740,6 @@ def _create_quantile_dmatrix(
             ref=ref,
             enable_categorical=enable_categorical,
         )
-        return d
-
     unzipped_dict = _get_worker_parts(parts)
     it = DaskPartitionIter(
         **unzipped_dict,
@@ -755,7 +748,7 @@ def _create_quantile_dmatrix(
         feature_weights=feature_weights,
     )
 
-    dmatrix = QuantileDMatrix(
+    return QuantileDMatrix(
         it,
         missing=missing,
         nthread=nthread,
@@ -763,7 +756,6 @@ def _create_quantile_dmatrix(
         ref=ref,
         enable_categorical=enable_categorical,
     )
-    return dmatrix
 
 
 def _create_dmatrix(
@@ -798,9 +790,7 @@ def _create_dmatrix(
     T = TypeVar("T")
 
     def concat_or_none(data: Sequence[Optional[T]]) -> Optional[T]:
-        if any(part is None for part in data):
-            return None
-        return dconcat(data)
+        return None if any(part is None for part in data) else dconcat(data)
 
     unzipped_dict = _get_worker_parts(list_of_parts)
     concated_dict: Dict[str, Any] = {}
@@ -830,16 +820,16 @@ async def _get_rabit_args(
     n_workers: int, dconfig: Optional[Dict[str, Any]], client: "distributed.Client"
 ) -> Dict[str, Union[str, int]]:
     """Get rabit context arguments from data distribution in DaskDMatrix."""
-    # There are 3 possible different addresses:
-    # 1. Provided by user via dask.config
-    # 2. Guessed by xgboost `get_host_ip` function
-    # 3. From dask scheduler
-    # We try 1 and 3 if 1 is available, otherwise 2 and 3.
-    valid_config = ["scheduler_address"]
     # See if user config is available
     host_ip: Optional[str] = None
     port: int = 0
     if dconfig is not None:
+        # There are 3 possible different addresses:
+        # 1. Provided by user via dask.config
+        # 2. Guessed by xgboost `get_host_ip` function
+        # 3. From dask scheduler
+        # We try 1 and 3 if 1 is available, otherwise 2 and 3.
+        valid_config = ["scheduler_address"]
         for k in dconfig:
             if k not in valid_config:
                 raise ValueError(f"Unknown configuration: {k}")
@@ -853,11 +843,7 @@ async def _get_rabit_args(
             except ValueError:
                 pass
 
-    if host_ip is not None:
-        user_addr = (host_ip, port)
-    else:
-        user_addr = None
-
+    user_addr = (host_ip, port) if host_ip is not None else None
     # Try address from dask scheduler, this might not work, see
     # https://github.com/dask/dask-xgboost/pull/40
     try:
@@ -866,10 +852,9 @@ async def _get_rabit_args(
     except Exception:  # pylint: disable=broad-except
         sched_addr = None
 
-    env = await client.run_on_scheduler(
+    return await client.run_on_scheduler(
         _start_tracker, n_workers, sched_addr, user_addr
     )
-    return env
 
 
 def _get_dask_config() -> Optional[Dict[str, Any]]:
@@ -903,8 +888,7 @@ async def _check_workers_are_alive(
 ) -> None:
     info = await client.scheduler.identity()
     current_workers = info["workers"].keys()
-    missing_workers = set(workers) - current_workers
-    if missing_workers:
+    if missing_workers := set(workers) - current_workers:
         raise RuntimeError(f"Missing required workers: {missing_workers}")
 
 
@@ -930,14 +914,14 @@ async def _train_async(
     _check_distributed_params(params)
 
     def dispatched_train(
-        parameters: Dict,
-        rabit_args: Dict[str, Union[str, int]],
-        train_id: int,
-        evals_name: List[str],
-        evals_id: List[int],
-        train_ref: dict,
-        *refs: dict,
-    ) -> Optional[TrainReturnT]:
+            parameters: Dict,
+            rabit_args: Dict[str, Union[str, int]],
+            train_id: int,
+            evals_name: List[str],
+            evals_id: List[int],
+            train_ref: dict,
+            *refs: dict,
+        ) -> Optional[TrainReturnT]:
         worker = distributed.get_worker()
         local_param = parameters.copy()
         n_threads = 0
@@ -955,7 +939,7 @@ async def _train_async(
             n_threads = dwnt
         local_param.update({"nthread": n_threads, "n_jobs": n_threads})
         local_history: TrainingCallback.EvalsLog = {}
-        with CommunicatorContext(**rabit_args), config.config_context(**global_config):
+        with (CommunicatorContext(**rabit_args), config.config_context(**global_config)):
             Xy = _dmatrix_from_list_of_parts(**train_ref, nthread=n_threads)
             evals: List[Tuple[DMatrix, str]] = []
             for i, ref in enumerate(refs):
@@ -981,7 +965,7 @@ async def _train_async(
                 dtrain=Xy,
                 num_boost_round=num_boost_round,
                 evals_result=local_history,
-                evals=evals if len(evals) != 0 else None,
+                evals=evals if evals else None,
                 obj=obj,
                 feval=feval,
                 custom_metric=custom_metric,
@@ -1107,10 +1091,10 @@ def _maybe_dataframe(
             prediction = cudf.DataFrame(
                 prediction, columns=columns, dtype=numpy.float32, index=index
             )
-        else:
-            if prediction.size == 0:
-                return DataFrame({}, columns=columns, dtype=numpy.float32, index=index)
+        elif prediction.size == 0:
+            return DataFrame({}, columns=columns, dtype=numpy.float32, index=index)
 
+        else:
             prediction = DataFrame(
                 prediction, columns=columns, dtype=numpy.float32, index=index
             )
@@ -1680,14 +1664,13 @@ class DaskScikitLearnBase(XGBModel):
             missing=self.missing,
             feature_types=self.feature_types,
         )
-        predts = await predict(
+        return await predict(
             self.client,
             model=self.get_booster(),
             data=test_dmatrix,
             pred_leaf=True,
             iteration_range=iteration_range,
         )
-        return predts
 
     def apply(
         self,
@@ -1718,8 +1701,7 @@ class DaskScikitLearnBase(XGBModel):
 
         """
 
-        client = _xgb_get_client(self._client)
-        return client
+        return _xgb_get_client(self._client)
 
     @client.setter
     def client(self, clt: "distributed.Client") -> None:
@@ -1744,10 +1726,9 @@ class DaskScikitLearnBase(XGBModel):
             if in_worker:
                 with distributed.worker_client() as client:
                     with _set_worker_client(self, client) as this:
-                        ret = this.client.sync(
+                        return this.client.sync(
                             func, **kwargs, asynchronous=asynchronous
                         )
-                        return ret
                     return ret
 
         return self.client.sync(func, **kwargs, asynchronous=self.client.asynchronous)
@@ -2081,8 +2062,8 @@ class DaskXGBRanker(DaskScikitLearnBase, XGBRankerMixIn):
         feature_weights: Optional[_DaskCollection],
         callbacks: Optional[Sequence[TrainingCallback]],
     ) -> "DaskXGBRanker":
-        msg = "Use `qid` instead of `group` on dask interface."
-        if not (group is None and eval_group is None):
+        if group is not None or eval_group is not None:
+            msg = "Use `qid` instead of `group` on dask interface."
             raise ValueError(msg)
         if qid is None:
             raise ValueError("`qid` is required for ranking.")

@@ -128,10 +128,7 @@ def test_error_msg() -> None:
 @given(lambdarank_parameter_strategy)
 @settings(deadline=None, print_blob=True)
 def test_lambdarank_parameters(params):
-    if params["objective"] == "rank:map":
-        rel = 1
-    else:
-        rel = 4
+    rel = 1 if params["objective"] == "rank:map" else 4
     X, y, q, w = tm.make_ltr(4096, 3, 13, rel)
     ranker = xgboost.XGBRanker(tree_method="hist", n_estimators=64, **params)
     ranker.fit(X, y, qid=q, sample_weight=w, eval_set=[(X, y)], eval_qid=[q])
@@ -226,10 +223,10 @@ class TestRanking:
         Cleanup test artifacts from download and unpacking
         :return:
         """
-        zip_f = cls.dpath + "MQ2008.zip"
+        zip_f = f"{cls.dpath}MQ2008.zip"
         if os.path.exists(zip_f):
             os.remove(zip_f)
-        directory = cls.dpath + "MQ2008"
+        directory = f"{cls.dpath}MQ2008"
         if os.path.exists(directory):
             shutil.rmtree(directory)
 

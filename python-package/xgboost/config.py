@@ -124,10 +124,7 @@ def config_doc(
             """,
 )
 def set_config(**new_config: Any) -> None:
-    not_none = {}
-    for k, v in new_config.items():
-        if v is not None:
-            not_none[k] = v
+    not_none = {k: v for k, v in new_config.items() if v is not None}
     config = json.dumps(not_none)
     _check_call(_LIB.XGBSetGlobalConfig(c_str(config)))
 
@@ -148,8 +145,7 @@ def get_config() -> Dict[str, Any]:
     _check_call(_LIB.XGBGetGlobalConfig(ctypes.byref(config_str)))
     value = config_str.value
     assert value
-    config = json.loads(py_str(value))
-    return config
+    return json.loads(py_str(value))
 
 
 @contextmanager

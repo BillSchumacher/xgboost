@@ -16,8 +16,8 @@ test = os.path.join(CURRENT_DIR, "../data/agaricus.txt.test")
 
 def native_interface():
     # load data in do training
-    dtrain = xgb.DMatrix(train + "?format=libsvm")
-    dtest = xgb.DMatrix(test + "?format=libsvm")
+    dtrain = xgb.DMatrix(f"{train}?format=libsvm")
+    dtest = xgb.DMatrix(f"{test}?format=libsvm")
     param = {"max_depth": 2, "eta": 1, "objective": "binary:logistic"}
     watchlist = [(dtest, "eval"), (dtrain, "train")]
     num_round = 3

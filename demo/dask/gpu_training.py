@@ -63,8 +63,7 @@ def using_quantile_device_dmatrix(client: Client, X: da.Array, y: da.Array) -> d
         num_boost_round=4,
     )
 
-    prediction = xgb.dask.predict(client, output, X)
-    return prediction
+    return xgb.dask.predict(client, output, X)
 
 
 if __name__ == "__main__":

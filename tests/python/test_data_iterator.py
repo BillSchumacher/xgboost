@@ -100,10 +100,7 @@ def run_data_iterator(
         assert non_increasing(results_from_it["Train"]["rmse"])
 
     X, y, w = it.as_arrays()
-    if use_cupy:
-        _y = y.get()
-    else:
-        _y = y
+    _y = y.get() if use_cupy else y
     np.testing.assert_allclose(Xy.get_label(), _y)
 
     Xy = xgb.DMatrix(X, y, weight=w)
